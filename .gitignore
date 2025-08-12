@@ -1,0 +1,98 @@
+# --------------------------------------------------------
+# General Ignore Rules
+# --------------------------------------------------------
+
+# OS generated files
+.DS_Store          # macOS specific file
+Thumbs.db          # Windows specific file
+
+# Compiled object files and libraries
+*.o
+*.a
+*.lib
+*.so
+*.dll
+*.class
+*.pyc
+__pycache__/
+
+# Build and distribution directories
+/build/
+/dist/
+/target/
+/out/
+
+# Log and temporary files
+*.log
+*.tmp
+*.temp
+*~                 # Backup files from some editors
+
+# --------------------------------------------------------
+# Language/Framework Specific Rules
+# --------------------------------------------------------
+
+### Python ###
+# Virtual environment directories
+venv/
+env/
+.venv/
+.tox/
+
+# Python-specific files
+*.pyc
+__pycache__/
+*.pyd
+.mypy_cache/
+
+### Node.js ###
+# Node.js dependency directory
+node_modules/
+npm-debug.log*
+
+### Web ###
+# Sass/Less compiled files
+.sass-cache/
+/css/
+/js/
+
+# --------------------------------------------------------
+# Editor and IDE Specific Rules
+# --------------------------------------------------------
+
+# Visual Studio Code
+.vscode/
+
+# JetBrains IDEs (e.g., PyCharm, IntelliJ)
+.idea/
+*.iml
+*.iws
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+*.swp
+*.swo
+
+# --------------------------------------------------------
+# Secrets and Configuration
+# --------------------------------------------------------
+
+# Environment variables
+.env
+.env.local
+
+# API keys and other sensitive data
+*.pem
+*.key
+*.cer
+
+# --------------------------------------------------------
+# Ignored Files with Exceptions
+# --------------------------------------------------------
+
+# To ignore all Markdown files but keep README.md:
+# *.md
+# !README.md

@@ -1,0 +1,9 @@
+fastapi>=0.100.0
+uvicorn
+chromadb[all]
+langchain-openai
+langchain-community
+sentence-transformers
+langchain-text-splitters
+langchain-huggingface
+langchain-chroma
