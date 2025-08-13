@@ -69,12 +69,8 @@ def main():
 
 def query_documents_with_reranking(memory_system, reranker_model, query: str, collections: str = None, k: int = 5, use_reranker: bool = True) -> dict:
     """Query documents with reranking support."""
-    result = query_documents_tool(memory_system, query, collections, k, use_reranker)
-    
-    if use_reranker and len(result.get("content", [])) > 1:
-        result = apply_reranking(query, result, reranker_model)
-    
-    return result
+    # Reranking is now handled inside query_documents_tool, so just call it directly
+    return query_documents_tool(memory_system, query, collections, k, use_reranker, reranker_model)
 
 
 # Global app instance for ASGI servers

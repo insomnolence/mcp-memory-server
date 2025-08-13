@@ -370,8 +370,20 @@ class HierarchicalMemorySystem:
         """
         stats = {"collections": {}}
         
-        for collection_name in ["short_term", "long_term", "consolidated", "legacy"]:
-            collection = getattr(self, f"{collection_name}_memory")
+        # Get all memory collection attributes dynamically
+        # Only include actual Chroma collection instances, not methods or other attributes
+        collection_attrs = []
+        for attr in dir(self):
+            if attr.endswith('_memory') and not attr.startswith('_'):
+                obj = getattr(self, attr)
+                # Check if it's a Chroma collection instance
+                if hasattr(obj, '_collection') or hasattr(obj, 'get'):
+                    collection_attrs.append(attr)
+        
+        for attr_name in collection_attrs:
+            collection = getattr(self, attr_name)
+            # Extract collection name from attribute (remove '_memory' suffix)
+            collection_name = attr_name.replace('_memory', '')
             try:
                 # Use ChromaDB's efficient count() method
                 if hasattr(collection, '_collection'):

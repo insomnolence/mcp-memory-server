@@ -2,7 +2,7 @@ import logging
 from typing import Dict, Any, Optional, List
 
 
-def query_documents_tool(memory_system, query: str, collections: str = None, k: int = 5, use_reranker: bool = True) -> dict:
+def query_documents_tool(memory_system, query: str, collections: str = None, k: int = 5, use_reranker: bool = True, reranker_model=None) -> dict:
     """Query documents from the hierarchical memory system with intelligent scoring.
     
     Args:
@@ -11,6 +11,7 @@ def query_documents_tool(memory_system, query: str, collections: str = None, k: 
         collections: Comma-separated collection names to search
         k: Maximum number of results to return
         use_reranker: Whether to apply cross-encoder reranking
+        reranker_model: Cross-encoder model for reranking (optional)
         
     Returns:
         Dictionary containing formatted search results
@@ -27,7 +28,7 @@ def query_documents_tool(memory_system, query: str, collections: str = None, k: 
         
         # Apply reranking if requested and we have multiple results
         if use_reranker and len(result["content"]) > 1:
-            result = apply_reranking(query, result)
+            result = apply_reranking(query, result, reranker_model)
         
         return result
     except Exception as e:
