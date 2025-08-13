@@ -1,0 +1,103 @@
+{
+  // Google Gemini CLI MCP Configuration  
+  // Save this as .mcp.json or specify with --mcp-config flag
+  
+  "servers": {
+    "mcp-memory-server": {
+      // Server identification
+      "name": "Enhanced Memory Server",
+      "description": "Hierarchical memory with domain-specific importance scoring",
+      "version": "1.0.0",
+      
+      // Connection configuration for Gemini CLI
+      "transport": {
+        "type": "stdio",
+        "command": "python3",
+        "args": [
+          "scripts/start_server.py"
+        ],
+        "cwd": ".",
+        "timeout": 30000
+      },
+      
+      // Environment variables for domain configuration
+      "env": {
+        // Domain selection - customize for your use case:
+        // "software-development", "business-development", "research", 
+        // "creative-writing", "cooking", "personal"
+        "MCP_DOMAIN": "software-development",
+        
+        // Optional: Custom configuration file path
+        // "MCP_CONFIG_PATH": "/path/to/custom/config.json",
+        
+        // Optional: Custom data directory  
+        // "MCP_DATA_PATH": "./data/custom"
+      },
+      
+      // Server capabilities that Gemini can utilize
+      "capabilities": [
+        "document_storage",
+        "semantic_search",
+        "importance_scoring", 
+        "memory_lifecycle",
+        "permanent_storage"
+      ],
+      
+      // Tool configuration
+      "tools": {
+        "enabled": [
+          "add_document",
+          "query_documents", 
+          "query_permanent_documents",
+          "get_memory_stats",
+          "get_lifecycle_stats",
+          "get_permanence_stats"
+        ],
+        
+        "defaults": {
+          "query_k": 5,
+          "use_reranker": true,
+          "timeout": 10000
+        }
+      }
+    }
+  },
+  
+  // Global Gemini CLI MCP settings
+  "client": {
+    "name": "Gemini CLI",
+    "version": "1.0.0",
+    "timeout": 30000,
+    "retries": 3,
+    
+    // Logging configuration
+    "logging": {
+      "level": "INFO",
+      "file": "./logs/gemini-mcp.log",
+      "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    },
+    
+    // Health check settings
+    "healthCheck": {
+      "enabled": true,
+      "interval": 60000,
+      "timeout": 5000
+    }
+  },
+  
+  // Domain presets for easy switching
+  "presets": {
+    "development": {
+      "MCP_DOMAIN": "software-development"
+    },
+    "business": {
+      "MCP_DOMAIN": "business-development"
+    },
+    "research": {
+      "MCP_DOMAIN": "research"
+    },
+    "writing": {
+      "MCP_DOMAIN": "creative-writing"
+    }
+  }
+}

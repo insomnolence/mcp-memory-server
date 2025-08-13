@@ -1,0 +1,55 @@
+{
+  // Google Gemini MCP Configuration
+  // This configuration is for Gemini clients that support MCP
+  // Adjust paths and settings according to your Gemini client requirements
+  
+  "mcp": {
+    "servers": {
+      "memory-server": {
+        // Server identification
+        "name": "MCP Memory Server",
+        "description": "Enhanced memory server with hierarchical storage and universal domain support",
+        
+        // Connection method - choose one
+        "connection": {
+          // Option 1: Command-based execution
+          "type": "stdio",
+          "command": "python3",
+          "args": [
+            "/path/to/your/mcp-memory-server/scripts/start_server.py"
+          ],
+          "cwd": "/path/to/your/mcp-memory-server"
+        }
+        
+        // Option 2: HTTP connection (uncomment if using HTTP)
+        // "connection": {
+        //   "type": "http",
+        //   "url": "http://127.0.0.1:8081",
+        //   "headers": {
+        //     "Content-Type": "application/json"
+        //   }
+        // }
+      }
+    },
+    
+    // Global environment configuration
+    "environment": {
+      // Domain selection for content scoring
+      "MCP_DOMAIN": "research",           // business-development, research, creative-writing, etc.
+      
+      // Optional: Custom paths
+      // "MCP_CONFIG_PATH": "/custom/config.json",
+      // "MCP_DATA_PATH": "/custom/data/location"
+    },
+    
+    // Client-specific settings
+    "client": {
+      "timeout": 30000,
+      "retries": 3,
+      "logging": {
+        "level": "INFO",
+        "file": "./logs/gemini-mcp.log"
+      }
+    }
+  }
+}

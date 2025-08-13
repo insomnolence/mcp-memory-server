@@ -1,0 +1,75 @@
+{
+  "database": {
+    "persist_directory": "./TestDB",
+    "collections": {
+      "short_term": "short_term_memory",
+      "long_term": "long_term_memory", 
+      "consolidated": "consolidated_memory",
+      "legacy": "knowledge_base"
+    }
+  },
+  "embeddings": {
+    "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    "chunk_size": 1000,
+    "chunk_overlap": 100
+  },
+  "memory_scoring": {
+    "decay_constant": 86400,
+    "max_access_count": 100,
+    "importance_threshold": 0.7,
+    "domain_patterns": {
+      "case_sensitive": false,
+      "patterns": {
+        "dialogue": {
+          "keywords": ["\"", "'", "said", "asked", "replied", "whispered", "shouted", "dialogue"],
+          "bonus": 0.25,
+          "match_mode": "any"
+        },
+        "character_development": {
+          "keywords": ["character", "protagonist", "development", "motivation", "backstory", "personality"],
+          "bonus": 0.4,
+          "match_mode": "any"
+        },
+        "plot_elements": {
+          "keywords": ["plot", "twist", "climax", "conflict", "resolution", "story arc", "chapter"],
+          "bonus": 0.35,
+          "match_mode": "any"
+        },
+        "world_building": {
+          "keywords": ["world", "setting", "environment", "culture", "society", "magic system", "rules"],
+          "bonus": 0.35,
+          "match_mode": "any"
+        },
+        "literary_devices": {
+          "keywords": ["metaphor", "symbolism", "foreshadowing", "imagery", "theme", "motif"],
+          "bonus": 0.3,
+          "match_mode": "any"
+        },
+        "emotional_content": {
+          "keywords": ["emotion", "feeling", "heart", "tears", "joy", "sorrow", "love", "fear"],
+          "bonus": 0.2,
+          "match_mode": "any"
+        }
+      },
+      "permanence_triggers": {
+        "plot_breakthroughs": {
+          "keywords": ["plot breakthrough", "story solution", "major twist", "perfect ending"],
+          "boost": 0.35
+        },
+        "character_insights": {
+          "keywords": ["character insight", "personality breakthrough", "motivation clarity"],
+          "boost": 0.3
+        },
+        "world_building_elements": {
+          "keywords": ["world rule", "magic system", "cultural element", "setting detail"],
+          "boost": 0.25
+        }
+      }
+    }
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8081,
+    "title": "Creative Writing Memory Server"
+  }
+}

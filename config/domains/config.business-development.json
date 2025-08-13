@@ -1,0 +1,61 @@
+{
+  "database": {
+    "persist_directory": "./TestDB",
+    "collections": {
+      "short_term": "short_term_memory",
+      "long_term": "long_term_memory", 
+      "consolidated": "consolidated_memory",
+      "legacy": "knowledge_base"
+    }
+  },
+  "embeddings": {
+    "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    "chunk_size": 1000,
+    "chunk_overlap": 100
+  },
+  "memory_scoring": {
+    "decay_constant": 86400,
+    "max_access_count": 100,
+    "importance_threshold": 0.7,
+    "domain_patterns": {
+      "case_sensitive": false,
+      "patterns": {
+        "revenue_opportunities": {
+          "keywords": ["revenue", "profit", "deal", "contract", "sale", "customer", "client acquisition"],
+          "bonus": 0.4,
+          "match_mode": "any"
+        },
+        "market_intelligence": {
+          "keywords": ["competitor", "market share", "industry trend", "market analysis", "opportunity"],
+          "bonus": 0.35,
+          "match_mode": "any"
+        },
+        "strategic_planning": {
+          "keywords": ["strategy", "planning", "roadmap", "goals", "objective", "KPI", "metrics"],
+          "bonus": 0.3,
+          "match_mode": "any"
+        },
+        "relationships": {
+          "keywords": ["partnership", "stakeholder", "relationship", "networking", "contact"],
+          "bonus": 0.25,
+          "match_mode": "any"
+        }
+      },
+      "permanence_triggers": {
+        "major_deals": {
+          "keywords": ["major deal", "enterprise client", "strategic partnership", "breakthrough"],
+          "boost": 0.3
+        },
+        "key_insights": {
+          "keywords": ["market insight", "competitive advantage", "game changer", "must remember"],
+          "boost": 0.25
+        }
+      }
+    }
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8081,
+    "title": "Business Development Memory Server"
+  }
+}

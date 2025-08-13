@@ -1,0 +1,131 @@
+{
+  // Generic MCP Server Configuration Template
+  // Adapt this template for your specific AI client or MCP implementation
+  
+  "serverInfo": {
+    "name": "MCP Memory Server",
+    "version": "1.0.0",
+    "description": "Enhanced memory server with hierarchical storage and domain-specific scoring",
+    "protocol": "json-rpc-2.0",
+    "capabilities": [
+      "document_management",
+      "semantic_search", 
+      "importance_scoring",
+      "lifecycle_management",
+      "permanence_system"
+    ]
+  },
+  
+  // Connection configuration - choose appropriate method
+  "connection": {
+    // Method 1: STDIO (recommended for local development)
+    "stdio": {
+      "command": "python3",
+      "args": ["/path/to/mcp-memory-server/scripts/start_server.py"],
+      "cwd": "/path/to/mcp-memory-server",
+      "env": {
+        "MCP_DOMAIN": "software-development"  // your domain
+      }
+    },
+    
+    // Method 2: HTTP (for remote or separate server process)
+    "http": {
+      "baseUrl": "http://127.0.0.1:8081",
+      "timeout": 30000,
+      "headers": {
+        "Content-Type": "application/json",
+        "User-Agent": "YourAI-MCP-Client/1.0"
+      }
+    },
+    
+    // Method 3: WebSocket (if supported)
+    "websocket": {
+      "url": "ws://127.0.0.1:8081/ws",
+      "timeout": 30000
+    }
+  },
+  
+  // Available MCP tools that your client can use
+  "availableTools": {
+    "add_document": {
+      "description": "Add content to memory with automatic importance scoring",
+      "parameters": {
+        "content": "string (required)",
+        "context": "object (optional)",
+        "memory_type": "string (optional): short_term, long_term, permanent",
+        "permanence_flag": "string (optional): critical, important"
+      }
+    },
+    
+    "query_documents": {
+      "description": "Search memory with semantic similarity and reranking",
+      "parameters": {
+        "query": "string (required)",
+        "collections": "string (optional): comma-separated collection names",
+        "k": "integer (optional): number of results, default 5",
+        "use_reranker": "boolean (optional): enable reranking, default true"
+      }
+    },
+    
+    "query_permanent_documents": {
+      "description": "Search only permanent/critical memory content",
+      "parameters": {
+        "query": "string (required)",
+        "k": "integer (optional): number of results, default 5"
+      }
+    },
+    
+    "get_memory_stats": {
+      "description": "Get memory system statistics and health information",
+      "parameters": {}
+    }
+  },
+  
+  // Domain configurations for different use cases
+  "domainPresets": {
+    "business-development": "Focus on revenue, deals, market intelligence",
+    "research": "Academic research, methodology, findings, evidence",
+    "creative-writing": "Characters, plot, dialogue, world-building",
+    "software-development": "Code, bugs, solutions, architecture",
+    "cooking": "Recipes, techniques, ingredients, innovations",
+    "personal": "General personal knowledge and conversations"
+  },
+  
+  // Client configuration recommendations
+  "clientSettings": {
+    "recommended": {
+      "timeout": 30000,
+      "retries": 3,
+      "batchSize": 10,
+      "logLevel": "INFO"
+    },
+    
+    "production": {
+      "timeout": 10000,
+      "retries": 1,
+      "logLevel": "ERROR",
+      "healthCheck": true
+    }
+  },
+  
+  // Usage examples for common scenarios
+  "usageExamples": {
+    "addImportantNote": {
+      "tool": "add_document",
+      "params": {
+        "content": "Important project decision: switching to microservices architecture",
+        "context": {"is_important": true},
+        "permanence_flag": "critical"
+      }
+    },
+    
+    "searchMemory": {
+      "tool": "query_documents", 
+      "params": {
+        "query": "microservices architecture benefits",
+        "k": 3,
+        "use_reranker": true
+      }
+    }
+  }
+}

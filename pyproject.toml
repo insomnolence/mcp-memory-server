@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-memory-server"
+version = "1.0.0"
+description = "Enhanced MCP Memory Server with hierarchical memory management"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    {name = "MCP Memory Server Team"},
+]
+keywords = ["mcp", "memory", "vector-database", "ai", "fastapi"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn",
+    "chromadb[all]",
+    "sentence-transformers",
+    "langchain-openai",
+    "langchain-community",
+    "langchain-text-splitters",
+    "langchain-huggingface",
+    "langchain-chroma",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "black",
+    "flake8",
+    "mypy",
+    "isort",
+]
+
+[project.scripts]
+mcp-memory-server = "mcp_memory_server.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

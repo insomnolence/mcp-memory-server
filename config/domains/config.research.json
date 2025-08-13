@@ -1,0 +1,70 @@
+{
+  "database": {
+    "persist_directory": "./TestDB",
+    "collections": {
+      "short_term": "short_term_memory",
+      "long_term": "long_term_memory", 
+      "consolidated": "consolidated_memory",
+      "legacy": "knowledge_base"
+    }
+  },
+  "embeddings": {
+    "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    "chunk_size": 1000,
+    "chunk_overlap": 100
+  },
+  "memory_scoring": {
+    "decay_constant": 86400,
+    "max_access_count": 100,
+    "importance_threshold": 0.7,
+    "domain_patterns": {
+      "case_sensitive": false,
+      "patterns": {
+        "methodology": {
+          "keywords": ["methodology", "approach", "protocol", "procedure", "method", "technique"],
+          "bonus": 0.35,
+          "match_mode": "any"
+        },
+        "findings": {
+          "keywords": ["found", "discovered", "evidence", "result", "outcome", "conclusion", "finding"],
+          "bonus": 0.4,
+          "match_mode": "any"
+        },
+        "hypothesis": {
+          "keywords": ["hypothesis", "theory", "proposition", "assumption", "predict", "expect"],
+          "bonus": 0.3,
+          "match_mode": "any"
+        },
+        "citations": {
+          "keywords": ["study", "research", "paper", "publication", "author", "journal", "citation"],
+          "bonus": 0.25,
+          "match_mode": "any"
+        },
+        "statistical": {
+          "keywords": ["significant", "correlation", "p-value", "statistical", "data", "analysis"],
+          "bonus": 0.3,
+          "match_mode": "any"
+        }
+      },
+      "permanence_triggers": {
+        "breakthrough_findings": {
+          "keywords": ["breakthrough", "significant finding", "major discovery", "novel result"],
+          "boost": 0.35
+        },
+        "validated_theory": {
+          "keywords": ["confirmed", "validated", "proven", "supports hypothesis"],
+          "boost": 0.3
+        },
+        "key_methodology": {
+          "keywords": ["innovative method", "new approach", "successful protocol"],
+          "boost": 0.25
+        }
+      }
+    }
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8081,
+    "title": "Research Memory Server"
+  }
+}

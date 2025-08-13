@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mcp-memory-server": {
+      "command": "python3",
+      "args": ["scripts/start_server.py"],
+      "env": {
+        "MCP_DOMAIN": "software-development"
+      }
+    }
+  }
+}

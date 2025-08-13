@@ -1,0 +1,40 @@
+{
+  // Claude Desktop MCP Server Configuration
+  // Location: ~/.claude/claude_desktop_config.json (macOS/Linux)
+  // Location: %APPDATA%\Claude\claude_desktop_config.json (Windows)
+  
+  "mcpServers": {
+    "mcp-memory-server": {
+      // Server connection details
+      "command": "python3",
+      "args": [
+        "/path/to/your/mcp-memory-server/scripts/start_server.py"
+      ],
+      
+      // Environment variables for domain configuration
+      "env": {
+        // Choose your domain: business-development, research, creative-writing, cooking
+        "MCP_DOMAIN": "software-development",
+        // Optional: Custom config path
+        // "MCP_CONFIG_PATH": "/path/to/custom/config.json"
+      },
+      
+      // Server capabilities and settings
+      "timeout": 30000,
+      "capabilities": {
+        "resources": {},
+        "tools": {},
+        "prompts": {}
+      }
+    },
+    
+    // Alternative: HTTP connection (if running server separately)
+    "mcp-memory-server-http": {
+      "httpUrl": "http://127.0.0.1:8081",
+      "timeout": 10000,
+      "capabilities": {
+        "tools": {}
+      }
+    }
+  }
+}
