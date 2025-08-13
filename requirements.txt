@@ -1,9 +1,20 @@
+# Core web framework and server
 fastapi>=0.100.0
 uvicorn
-chromadb[all]
-langchain-openai
-langchain-community
+
+# Database and embeddings
+chromadb
 sentence-transformers
+
+# LangChain ecosystem for embeddings and text processing
+langchain-core
+langchain-community
 langchain-text-splitters
 langchain-huggingface
 langchain-chroma
+
+# Data validation and models
+pydantic>=2.0.0
+
+# Standard library enhancements (if not available in Python version)
+typing-extensions

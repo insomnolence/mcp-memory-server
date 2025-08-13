@@ -1,98 +1,104 @@
-# --------------------------------------------------------
-# General Ignore Rules
-# --------------------------------------------------------
-
-# OS generated files
-.DS_Store          # macOS specific file
-Thumbs.db          # Windows specific file
-
-# Compiled object files and libraries
-*.o
-*.a
-*.lib
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 *.so
-*.dll
-*.class
-*.pyc
-__pycache__/
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Build and distribution directories
-/build/
-/dist/
-/target/
-/out/
-
-# Log and temporary files
-*.log
-*.tmp
-*.temp
-*~                 # Backup files from some editors
-
-# --------------------------------------------------------
-# Language/Framework Specific Rules
-# --------------------------------------------------------
-
-### Python ###
-# Virtual environment directories
-venv/
+# Virtual environments
+.env
+.venv
 env/
-.venv/
-.tox/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Python-specific files
-*.pyc
-__pycache__/
-*.pyd
-.mypy_cache/
-
-### Node.js ###
-# Node.js dependency directory
-node_modules/
-npm-debug.log*
-
-### Web ###
-# Sass/Less compiled files
-.sass-cache/
-/css/
-/js/
-
-# --------------------------------------------------------
-# Editor and IDE Specific Rules
-# --------------------------------------------------------
-
-# Visual Studio Code
+# IDE
 .vscode/
-
-# JetBrains IDEs (e.g., PyCharm, IntelliJ)
 .idea/
-*.iml
-*.iws
-
-# Sublime Text
-*.sublime-workspace
-*.sublime-project
-
-# Vim
 *.swp
 *.swo
+*~
 
-# --------------------------------------------------------
-# Secrets and Configuration
-# --------------------------------------------------------
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Environment variables
-.env
-.env.local
+# Logs
+logs/
+*.log
 
-# API keys and other sensitive data
-*.pem
+# Database files
+data/memory/*
+!data/memory/.gitkeep
+*.sqlite3
+*.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Claude Code settings  
+.claude-code/
+.claude/
+.gemini/
+claude-code-settings.json
+
+# Ignore all markdown files in root except README.md
+/*.md
+!README.md
+
+# Configuration files
+config.json
+
+# Local config overrides and backups
+config.local.json
+config.dev.json
+config.json.backup_*
+*.backup
+*.bak
+
+# Environment files with secrets
+.env.*
 *.key
-*.cer
+*.token
 
-# --------------------------------------------------------
-# Ignored Files with Exceptions
-# --------------------------------------------------------
-
-# To ignore all Markdown files but keep README.md:
-# *.md
-# !README.md
+# Legacy directories (from old structure)
+TestDB/
+LegacyDB/
+TestDB_backup_*/
+mcp_server_lib/
+backup/
