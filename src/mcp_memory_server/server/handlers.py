@@ -1,9 +1,36 @@
 import asyncio
+import json
 from typing import List, Dict, Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from .models import JsonRpcRequest, JsonRpcResponse, JsonRpcError
+
+
+def convert_to_mcp_format(tool_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert custom tool response to MCP-compliant format.
+    
+    Args:
+        tool_result: Custom tool response dict
+        
+    Returns:
+        MCP-compliant response dict
+    """
+    # Check if it's a success/error response
+    is_error = not tool_result.get('success', True)
+    
+    # Format the content as JSON text
+    content_text = json.dumps(tool_result, indent=2)
+    
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": content_text
+            }
+        ],
+        "isError": is_error
+    }
 
 
 async def list_resources_handler() -> List[dict]:
@@ -106,7 +133,11 @@ async def handle_tools_call(rpc_id: int, params: dict, tool_registry: Dict[str, 
         return JSONResponse(content=error_response.dict(), status_code=400)
     
     result = tool_func(**tool_args)
-    response = JsonRpcResponse(id=rpc_id, result=result)
+    
+    # Convert custom tool response to MCP-compliant format
+    mcp_result = convert_to_mcp_format(result)
+    
+    response = JsonRpcResponse(id=rpc_id, result=mcp_result)
     return JSONResponse(content=response.dict(), media_type="application/json-rpc")
 
 

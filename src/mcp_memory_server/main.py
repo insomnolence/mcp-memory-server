@@ -90,7 +90,7 @@ def setup_shutdown_handlers(lifecycle_manager):
         if _global_lifecycle_manager:
             _global_lifecycle_manager.stop_background_maintenance()
         logging.info("Cleanup completed, exiting.")
-        sys.exit(0)
+        # Don't use sys.exit(0) from signal handler - let the server shutdown naturally
     
     def cleanup_atexit():
         """Cleanup function for atexit."""
