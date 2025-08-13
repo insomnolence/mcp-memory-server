@@ -1,6 +1,11 @@
+> **Note:** This is a personal project that is ongoing.
+>
+
+---
+
 # Enhanced MCP Memory Server 🧠
 
-A personal project exploring intelligent hierarchical memory management for AI systems through the Model Context Protocol (MCP). Features an interactive configuration wizard, domain-agnostic design, and experimental lifecycle management.
+A personal project exploring intelligent hierarchical memory management for AI systems through the Model Context Protocol (MCP). Features an interactive configuration wizard, domain-agnostic design, and experimental lifecycle management. Born out of need to have a kind of "memory" for AI agents I was using, this helps keep context and knowlege from session to session.
 
 ## ✨ Key Features
 
