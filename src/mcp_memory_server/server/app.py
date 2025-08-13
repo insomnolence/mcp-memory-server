@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from typing import Dict, List, Any
+from contextlib import asynccontextmanager
 import time
+import logging
 
 from .models import JsonRpcRequest
 from .handlers import (
@@ -11,19 +13,42 @@ from .handlers import (
 )
 
 
-def create_app(server_config: dict) -> FastAPI:
+def create_app(server_config: dict, lifecycle_manager=None) -> FastAPI:
     """Create and configure the FastAPI application.
     
     Args:
         server_config: Server configuration dictionary
+        lifecycle_manager: Lifecycle manager for shutdown cleanup
         
     Returns:
         Configured FastAPI application instance
     """
-    app = FastAPI(
-        title=server_config.get('title', 'Advanced Project Memory MCP Server'),
-        version=server_config.get('version', '2.0.0')
-    )
+    
+    # Define lifespan context manager for cleanup
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # Startup
+        logging.info("FastAPI application starting up")
+        yield
+        # Shutdown
+        if lifecycle_manager:
+            logging.info("FastAPI shutdown: stopping background maintenance")
+            if hasattr(lifecycle_manager, 'stop_background_maintenance'):
+                lifecycle_manager.stop_background_maintenance()
+            logging.info("Lifecycle cleanup completed")
+    
+    # Create app with lifespan if lifecycle_manager is provided
+    if lifecycle_manager:
+        app = FastAPI(
+            title=server_config.get('title', 'Advanced Project Memory MCP Server'),
+            version=server_config.get('version', '2.0.0'),
+            lifespan=lifespan
+        )
+    else:
+        app = FastAPI(
+            title=server_config.get('title', 'Advanced Project Memory MCP Server'),
+            version=server_config.get('version', '2.0.0')
+        )
     
     # Add health check endpoint
     @app.get("/health")
