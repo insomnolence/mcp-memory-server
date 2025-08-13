@@ -13,7 +13,6 @@ from pathlib import Path
 src_path = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_path))
 
-from mcp_memory_server.main import app
 from mcp_memory_server.config import Config
 
 def main():
@@ -35,7 +34,7 @@ def main():
     
     # Start the server
     uvicorn.run(
-        app,  # Use imported app
+        "mcp_memory_server.main:app",  # Use import string for reload capability
         host=host,
         port=port,
         reload=True,  # Enable auto-reload for development
