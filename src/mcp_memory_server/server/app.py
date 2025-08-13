@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from typing import Dict, List, Any
+import time
 
 from .models import JsonRpcRequest
 from .handlers import (
@@ -23,6 +24,17 @@ def create_app(server_config: dict) -> FastAPI:
         title=server_config.get('title', 'Advanced Project Memory MCP Server'),
         version=server_config.get('version', '2.0.0')
     )
+    
+    # Add health check endpoint
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint for monitoring system status."""
+        return {
+            "status": "healthy",
+            "timestamp": time.time(),
+            "service": "MCP Memory Server",
+            "version": server_config.get('version', '2.0.0')
+        }
     
     return app
 

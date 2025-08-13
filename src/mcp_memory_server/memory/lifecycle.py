@@ -255,6 +255,10 @@ class LifecycleManager:
         self.memory_system = memory_system
         self.config = lifecycle_config
         
+        # Thread safety
+        self._maintenance_lock = threading.RLock()
+        self._state_lock = threading.RLock()
+        
         # Initialize sub-managers
         self.ttl_manager = TTLManager(lifecycle_config.get('ttl', {}))
         self.aging = MemoryAging(lifecycle_config.get('aging', {}))
@@ -422,35 +426,37 @@ class LifecycleManager:
     
     def start_background_maintenance(self):
         """Start background maintenance processes."""
-        if not self.maintenance_enabled:
-            logging.info("Background maintenance disabled")
-            return
-        
-        if self._maintenance_thread and self._maintenance_thread.is_alive():
-            logging.warning("Background maintenance already running")
-            return
-        
-        self._stop_maintenance = False
-        
-        # Initialize timestamps
-        current_time = time.time()
-        self._last_cleanup = current_time
-        self._last_statistics = current_time
-        self._last_aging_refresh = current_time
-        self._last_deep_maintenance = current_time
-        
-        # Start maintenance thread
-        self._maintenance_thread = threading.Thread(target=self._maintenance_loop, daemon=True)
-        self._maintenance_thread.start()
-        
-        logging.info("Background maintenance started")
+        with self._state_lock:
+            if not self.maintenance_enabled:
+                logging.info("Background maintenance disabled")
+                return
+            
+            if self._maintenance_thread and self._maintenance_thread.is_alive():
+                logging.warning("Background maintenance already running")
+                return
+            
+            self._stop_maintenance = False
+            
+            # Initialize timestamps
+            current_time = time.time()
+            self._last_cleanup = current_time
+            self._last_statistics = current_time
+            self._last_aging_refresh = current_time
+            self._last_deep_maintenance = current_time
+            
+            # Start maintenance thread
+            self._maintenance_thread = threading.Thread(target=self._maintenance_loop, daemon=True)
+            self._maintenance_thread.start()
+            
+            logging.info("Background maintenance started")
     
     def stop_background_maintenance(self):
         """Stop background maintenance processes."""
-        self._stop_maintenance = True
-        if self._maintenance_thread:
-            self._maintenance_thread.join(timeout=5)
-        logging.info("Background maintenance stopped")
+        with self._state_lock:
+            self._stop_maintenance = True
+            if self._maintenance_thread:
+                self._maintenance_thread.join(timeout=5)
+            logging.info("Background maintenance stopped")
     
     def _maintenance_loop(self):
         """Main maintenance loop running in background thread."""
@@ -458,25 +464,27 @@ class LifecycleManager:
             try:
                 current_time = time.time()
                 
-                # Check if it's time for cleanup (every hour)
-                if current_time - self._last_cleanup >= 3600:  # 1 hour
-                    self._scheduled_cleanup()
-                    self._last_cleanup = current_time
-                
-                # Check if it's time for statistics (every 6 hours)
-                if current_time - self._last_statistics >= 21600:  # 6 hours
-                    self._scheduled_statistics()
-                    self._last_statistics = current_time
-                
-                # Check if it's time for aging refresh (every 24 hours)
-                if current_time - self._last_aging_refresh >= 86400:  # 24 hours
-                    self._scheduled_aging_refresh()
-                    self._last_aging_refresh = current_time
-                
-                # Check if it's time for deep maintenance (every week)
-                if current_time - self._last_deep_maintenance >= 604800:  # 1 week
-                    self._scheduled_deep_maintenance()
-                    self._last_deep_maintenance = current_time
+                # Use lock for maintenance operations to prevent conflicts
+                with self._maintenance_lock:
+                    # Check if it's time for cleanup (every hour)
+                    if current_time - self._last_cleanup >= 3600:  # 1 hour
+                        self._scheduled_cleanup()
+                        self._last_cleanup = current_time
+                    
+                    # Check if it's time for statistics (every 6 hours)
+                    if current_time - self._last_statistics >= 21600:  # 6 hours
+                        self._scheduled_statistics()
+                        self._last_statistics = current_time
+                    
+                    # Check if it's time for aging refresh (every 24 hours)
+                    if current_time - self._last_aging_refresh >= 86400:  # 24 hours
+                        self._scheduled_aging_refresh()
+                        self._last_aging_refresh = current_time
+                    
+                    # Check if it's time for deep maintenance (every week)
+                    if current_time - self._last_deep_maintenance >= 604800:  # 1 week
+                        self._scheduled_deep_maintenance()
+                        self._last_deep_maintenance = current_time
                 
                 time.sleep(300)  # Check every 5 minutes
                 

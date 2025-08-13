@@ -4,13 +4,13 @@ A personal project exploring intelligent hierarchical memory management for AI s
 
 ## ✨ Key Features
 
-- **🧠 4-Tier Memory Architecture**: Short-term, long-term, permanent, and consolidated memory collections
+- **🧠 3-Tier Memory Architecture**: Short-term, long-term, and permanent memory collections
 - **⚙️ Configuration Wizard**: Interactive setup wizard with template support and guided configuration
 - **🌐 Universal Domain Support**: Works with ANY domain - business, research, creative, technical, etc.
 - **🎯 Intelligent Importance Scoring**: Multi-factor algorithm combining semantic similarity, recency, frequency, and domain patterns
 - **⏰ Automatic Lifecycle Management**: TTL-based expiration with importance-weighted aging and jitter
 - **🛡️ Permanence System**: Critical knowledge preservation with automatic and explicit permanence triggers
-- **🔧 Background Maintenance**: Automated cleanup, consolidation, and health monitoring
+- **🔧 Background Maintenance**: Automated cleanup and health monitoring
 - **🚀 FastAPI Implementation**: Modular architecture with MCP tools API
 
 ## 🚀 Quick Start
@@ -250,6 +250,14 @@ python3 scripts/start_server.py --config custom-config.json
 - **Structured Logging** - Logs saved to `logs/mcp_server.log`  
 - **Memory Statistics** - Built-in tools to monitor system usage
 - **Validation Tools** - Configuration checking and server health
+
+## 🚀 Future Enhancements
+
+### Planned Features
+- **Memory Consolidation** - Automatic summarization and compression of related memories
+- **Advanced Analytics** - Usage patterns and memory effectiveness metrics
+- **Multi-Provider Embeddings** - Support for OpenAI, Azure, Cohere embedding models
+- **Enhanced Monitoring** - Comprehensive dashboards and alerts
 
 ---
 

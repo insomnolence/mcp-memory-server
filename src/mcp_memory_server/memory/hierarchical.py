@@ -32,31 +32,38 @@ class HierarchicalMemorySystem:
         self.chunk_size = embeddings_config.get('chunk_size', 1000)
         self.chunk_overlap = embeddings_config.get('chunk_overlap', 100)
         
-        # Initialize memory collections
-        self.short_term_memory = Chroma(
-            collection_name=self.collection_names.get('short_term', 'short_term_memory'),
-            embedding_function=self.embedding_function,
-            persist_directory=self.persist_directory,
-        )
-        
-        self.long_term_memory = Chroma(
-            collection_name=self.collection_names.get('long_term', 'long_term_memory'), 
-            embedding_function=self.embedding_function,
-            persist_directory=self.persist_directory,
-        )
-        
-        self.consolidated_memory = Chroma(
-            collection_name=self.collection_names.get('consolidated', 'consolidated_memory'),
-            embedding_function=self.embedding_function,
-            persist_directory=self.persist_directory,
-        )
-        
-        # Legacy collection for backward compatibility
-        self.legacy_memory = Chroma(
-            collection_name=self.collection_names.get('legacy', 'knowledge_base'),
-            embedding_function=self.embedding_function,
-            persist_directory=self.persist_directory,
-        )
+        # Initialize memory collections with error handling
+        try:
+            self.short_term_memory = Chroma(
+                collection_name=self.collection_names.get('short_term', 'short_term_memory'),
+                embedding_function=self.embedding_function,
+                persist_directory=self.persist_directory,
+            )
+            
+            self.long_term_memory = Chroma(
+                collection_name=self.collection_names.get('long_term', 'long_term_memory'), 
+                embedding_function=self.embedding_function,
+                persist_directory=self.persist_directory,
+            )
+            
+            self.consolidated_memory = Chroma(
+                collection_name=self.collection_names.get('consolidated', 'consolidated_memory'),
+                embedding_function=self.embedding_function,
+                persist_directory=self.persist_directory,
+            )
+            
+            # Legacy collection for backward compatibility
+            self.legacy_memory = Chroma(
+                collection_name=self.collection_names.get('legacy', 'knowledge_base'),
+                embedding_function=self.embedding_function,
+                persist_directory=self.persist_directory,
+            )
+            
+            logging.info(f"Successfully initialized all memory collections in {self.persist_directory}")
+            
+        except Exception as init_error:
+            logging.error(f"Failed to initialize memory collections: {init_error}")
+            raise RuntimeError(f"Memory system initialization failed: {init_error}") from init_error
         
         self.importance_scorer = MemoryImportanceScorer(scoring_config)
         
@@ -126,21 +133,37 @@ class HierarchicalMemorySystem:
             })
             documents.append(Document(page_content=chunk, metadata=chunk_metadata))
         
-        # Add to collection
-        target_collection.add_documents(documents)
-        
-        # Trigger maintenance if needed
-        if collection_name == "short_term":
-            self._maintain_short_term_memory()
+        # Add to collection with error handling
+        try:
+            target_collection.add_documents(documents)
             
-        return {
-            "success": True,
-            "message": f"Added {len(documents)} chunks to {collection_name} memory",
-            "memory_id": memory_id,
-            "importance_score": importance,
-            "collection": collection_name,
-            "chunks_added": len(documents)
-        }
+            # Trigger maintenance if needed
+            if collection_name == "short_term":
+                try:
+                    self._maintain_short_term_memory()
+                except Exception as maintenance_error:
+                    logging.warning(f"Memory maintenance failed after adding documents: {maintenance_error}")
+            
+            return {
+                "success": True,
+                "message": f"Added {len(documents)} chunks to {collection_name} memory",
+                "memory_id": memory_id,
+                "importance_score": importance,
+                "collection": collection_name,
+                "chunks_added": len(documents)
+            }
+            
+        except Exception as db_error:
+            logging.error(f"Database error adding documents to {collection_name}: {db_error}")
+            return {
+                "success": False,
+                "message": f"Failed to add documents to {collection_name} memory: {str(db_error)}",
+                "memory_id": memory_id,
+                "importance_score": importance,
+                "collection": collection_name,
+                "chunks_added": 0,
+                "error": str(db_error)
+            }
     
     def query_memories(self, query: str, collections: List[str] = None, k: int = 5) -> dict:
         """Query across memory collections with intelligent scoring.
@@ -241,14 +264,74 @@ class HierarchicalMemorySystem:
     def _maintain_short_term_memory(self):
         """Maintain short-term memory collection size."""
         try:
-            # Get current count (approximate)
-            sample_docs = self.short_term_memory.similarity_search("test", k=1)
-            if not sample_docs:
+            # Get current document count efficiently
+            if hasattr(self.short_term_memory, '_collection'):
+                current_count = self.short_term_memory._collection.count()
+            else:
+                # Fallback to get() method
+                result = self.short_term_memory.get()
+                current_count = len(result.get('ids', []))
+            
+            if current_count <= self.short_term_max_size:
+                logging.debug(f"Short-term memory within limits: {current_count}/{self.short_term_max_size}")
                 return
                 
-            # For now, we'll implement a simple strategy
-            # In production, you'd want more sophisticated pruning
-            pass
+            # Calculate how many documents to remove
+            excess_count = current_count - self.short_term_max_size
+            logging.info(f"Short-term memory over limit: {current_count}/{self.short_term_max_size}, removing {excess_count} oldest documents")
+            
+            # Get all documents with metadata efficiently  
+            if hasattr(self.short_term_memory, '_collection'):
+                chroma_result = self.short_term_memory._collection.get()
+                all_docs = []
+                for doc_id, content, metadata in zip(
+                    chroma_result.get('ids', []),
+                    chroma_result.get('documents', []),  
+                    chroma_result.get('metadatas', [])
+                ):
+                    from langchain_core.documents import Document
+                    # Ensure metadata exists and add the ChromaDB ID for deletion
+                    if metadata is None:
+                        metadata = {}
+                    metadata['chroma_id'] = doc_id
+                    all_docs.append(Document(page_content=content, metadata=metadata))
+            else:
+                # Fallback to similarity search if direct access unavailable
+                all_docs = self.short_term_memory.similarity_search("", k=current_count)
+            
+            # Sort by timestamp (oldest first) - documents should have 'timestamp' in metadata
+            docs_with_age = []
+            for doc in all_docs:
+                timestamp = doc.metadata.get('timestamp', 0)
+                access_count = doc.metadata.get('access_count', 0)
+                # Prefer removing older and less accessed documents
+                priority_score = timestamp + (access_count * 86400)  # Weight access count as days
+                docs_with_age.append((priority_score, doc))
+            
+            # Sort by priority (lower score = older/less accessed = higher removal priority)
+            docs_with_age.sort(key=lambda x: x[0])
+            
+            # Remove oldest documents
+            docs_to_remove = [doc for _, doc in docs_with_age[:excess_count]]
+            
+            # ChromaDB delete requires document IDs
+            if hasattr(self.short_term_memory, '_collection'):
+                ids_to_delete = []
+                for doc in docs_to_remove:
+                    # Use the ChromaDB ID we stored in metadata, fallback to hash
+                    doc_id = doc.metadata.get('chroma_id') or doc.metadata.get('id') or str(hash(doc.page_content))
+                    ids_to_delete.append(doc_id)
+                
+                if ids_to_delete:
+                    try:
+                        self.short_term_memory._collection.delete(ids=ids_to_delete)
+                        logging.info(f"Successfully removed {len(ids_to_delete)} old documents from short-term memory")
+                    except Exception as delete_error:
+                        logging.warning(f"Could not delete documents: {delete_error}")
+                        # Fallback: clear collection if individual deletes fail
+                        logging.warning("Attempting collection reset as fallback")
+                        self.short_term_memory._collection.delete()
+                        logging.warning("Short-term memory collection cleared due to maintenance issues")
             
         except Exception as e:
             logging.warning(f"Short-term memory maintenance error: {e}")
@@ -290,19 +373,13 @@ class HierarchicalMemorySystem:
         for collection_name in ["short_term", "long_term", "consolidated", "legacy"]:
             collection = getattr(self, f"{collection_name}_memory")
             try:
-                # Try to get a sample to check if collection exists and has data
-                sample = collection.similarity_search("test", k=1)
-                if sample:
-                    # Get approximate count by trying larger searches
-                    docs_10 = collection.similarity_search("", k=10)
-                    docs_100 = collection.similarity_search("", k=100)
-                    
-                    if len(docs_100) == 100:
-                        count = "100+"
-                    else:
-                        count = len(docs_100)
+                # Use ChromaDB's efficient count() method
+                if hasattr(collection, '_collection'):
+                    count = collection._collection.count()
                 else:
-                    count = 0
+                    # Fallback to get() if count() not available
+                    result = collection.get()
+                    count = len(result.get('ids', []))
                     
                 stats["collections"][collection_name] = {
                     "count": count,
