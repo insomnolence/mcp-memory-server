@@ -269,7 +269,7 @@ class LifecycleManager:
         
         # Background thread for maintenance
         self._maintenance_thread = None
-        self._stop_maintenance = False
+        self._stop_event = threading.Event()  # Use Event for graceful shutdown
         self._last_cleanup = 0
         self._last_statistics = 0
         self._last_aging_refresh = 0
@@ -435,7 +435,7 @@ class LifecycleManager:
                 logging.warning("Background maintenance already running")
                 return
             
-            self._stop_maintenance = False
+            self._stop_event.clear()
             
             # Initialize timestamps
             current_time = time.time()
@@ -453,7 +453,7 @@ class LifecycleManager:
     def stop_background_maintenance(self):
         """Stop background maintenance processes."""
         with self._state_lock:
-            self._stop_maintenance = True
+            self._stop_event.set()  # Signal the thread to stop
             if self._maintenance_thread and self._maintenance_thread.is_alive():
                 logging.info("Stopping background maintenance thread...")
                 self._maintenance_thread.join(timeout=10)  # Increased timeout
@@ -470,65 +470,49 @@ class LifecycleManager:
     def _maintenance_loop(self):
         """Main maintenance loop running in background thread."""
         logging.info("Background maintenance loop started")
-        while not self._stop_maintenance:
+        while not self._stop_event.is_set():
             try:
                 current_time = time.time()
                 
-                # Check stop flag before lock acquisition
-                if self._stop_maintenance:
-                    break
-                
                 # Use lock for maintenance operations to prevent conflicts
                 with self._maintenance_lock:
-                    # Double-check stop flag inside lock
-                    if self._stop_maintenance:
-                        break
+                    if self._stop_event.is_set(): break
                     
                     # Check if it's time for cleanup (every hour)
                     if current_time - self._last_cleanup >= 3600:  # 1 hour
                         self._scheduled_cleanup()
                         self._last_cleanup = current_time
                     
-                    # Check stop flag between operations
-                    if self._stop_maintenance:
-                        break
+                    if self._stop_event.is_set(): break
                     
                     # Check if it's time for statistics (every 6 hours)
                     if current_time - self._last_statistics >= 21600:  # 6 hours
                         self._scheduled_statistics()
                         self._last_statistics = current_time
                     
-                    # Check stop flag between operations
-                    if self._stop_maintenance:
-                        break
+                    if self._stop_event.is_set(): break
                     
                     # Check if it's time for aging refresh (every 24 hours)
                     if current_time - self._last_aging_refresh >= 86400:  # 24 hours
                         self._scheduled_aging_refresh()
                         self._last_aging_refresh = current_time
                     
-                    # Check stop flag between operations
-                    if self._stop_maintenance:
-                        break
+                    if self._stop_event.is_set(): break
                     
                     # Check if it's time for deep maintenance (every week)
                     if current_time - self._last_deep_maintenance >= 604800:  # 1 week
                         self._scheduled_deep_maintenance()
                         self._last_deep_maintenance = current_time
                 
-                # Interruptible sleep - check stop flag every 10 seconds for faster shutdown
-                for _ in range(30):  # 30 * 10 = 300 seconds total
-                    if self._stop_maintenance:
-                        break
-                    time.sleep(10)
+                # Wait for the next check, or until stop is signaled
+                # This is an interruptible sleep.
+                self._stop_event.wait(timeout=300)  # Wait for 5 minutes
                 
             except Exception as e:
                 logging.error(f"Maintenance loop error: {e}")
-                # Interruptible error sleep  
-                for _ in range(30):  # 30 * 10 = 300 seconds total
-                    if self._stop_maintenance:
-                        break
-                    time.sleep(10)
+                # Wait before retrying on error, but still be interruptible
+                if not self._stop_event.is_set():
+                    self._stop_event.wait(timeout=300)
         
         logging.info("Background maintenance loop exited")
     

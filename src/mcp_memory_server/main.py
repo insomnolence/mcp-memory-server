@@ -1,7 +1,4 @@
 import logging
-import signal
-import sys
-import atexit
 from functools import partial
 from sentence_transformers import CrossEncoder
 
@@ -65,9 +62,6 @@ def main():
     # Setup JSON-RPC handler
     setup_json_rpc_handler(app, tool_registry, tool_definitions, server_config)
     
-    # Setup shutdown handlers for proper cleanup
-    setup_shutdown_handlers(lifecycle_manager)
-    
     logging.info("Enhanced MCP Server with Lifecycle Management initialized successfully")
     logging.info(f"Phase 3 Features: TTL Management, Memory Aging, Background Maintenance")
     return app
@@ -79,34 +73,7 @@ def query_documents_with_reranking(memory_system, reranker_model, query: str, co
     return query_documents_tool(memory_system, query, collections, k, use_reranker, reranker_model)
 
 
-def setup_shutdown_handlers(lifecycle_manager):
-    """Setup shutdown handlers for clean exit."""
-    global _global_lifecycle_manager
-    _global_lifecycle_manager = lifecycle_manager
-    
-    def shutdown_handler(signum=None, frame=None):
-        """Handle shutdown signals."""
-        logging.info(f"Received shutdown signal ({signum}), cleaning up...")
-        if _global_lifecycle_manager:
-            _global_lifecycle_manager.stop_background_maintenance()
-        logging.info("Cleanup completed, exiting.")
-        # Don't use sys.exit(0) from signal handler - let the server shutdown naturally
-    
-    def cleanup_atexit():
-        """Cleanup function for atexit."""
-        if _global_lifecycle_manager:
-            logging.info("Atexit cleanup: stopping background maintenance")
-            _global_lifecycle_manager.stop_background_maintenance()
-    
-    # Register signal handlers
-    signal.signal(signal.SIGTERM, shutdown_handler)
-    signal.signal(signal.SIGINT, shutdown_handler)
-    
-    # Register atexit handler as fallback
-    atexit.register(cleanup_atexit)
-
 # Global variables for cleanup
-_global_lifecycle_manager = None
 _global_app = None
 
 # Initialize app
