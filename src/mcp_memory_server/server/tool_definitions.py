@@ -56,7 +56,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     },
                     "collections": {
                         "type": "string",
-                        "description": "Comma-separated list of collections to search ('short_term', 'long_term', 'consolidated'). Default: all collections."
+                        "description": "Comma-separated list of collections to search ('short_term', 'long_term'). Default: all collections."
                     },
                     "k": {
                         "type": "integer",
@@ -137,6 +137,58 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
             "inputSchema": {
                 "type": "object",
                 "properties": {},
+                "required": []
+            }
+        },
+        {
+            "name": "deduplicate_memories",
+            "description": "Manually trigger deduplication process on specified collections to remove duplicate content and optimize storage.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "collections": {
+                        "type": "string",
+                        "description": "Comma-separated list of collections to deduplicate ('short_term', 'long_term'). Default: all collections.",
+                        "default": "short_term,long_term"
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": "If true, only analyze and report potential duplicates without making changes.",
+                        "default": false
+                    }
+                },
+                "required": []
+            }
+        },
+        {
+            "name": "get_deduplication_stats",
+            "description": "Get comprehensive statistics about deduplication effectiveness, storage savings, and system performance.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        },
+        {
+            "name": "preview_duplicates",
+            "description": "Preview potential duplicate documents without removing them, showing similarity scores and merge candidates.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "collection": {
+                        "type": "string",
+                        "description": "Collection to analyze for duplicates ('short_term' or 'long_term').",
+                        "enum": ["short_term", "long_term"],
+                        "default": "short_term"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of duplicate pairs to show.",
+                        "default": 10,
+                        "minimum": 1,
+                        "maximum": 50
+                    }
+                },
                 "required": []
             }
         }

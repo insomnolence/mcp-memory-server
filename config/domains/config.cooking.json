@@ -4,8 +4,7 @@
     "persist_directory": "./chroma_db_cooking",
     "collections": {
       "short_term": "short_term_memory",
-      "long_term": "long_term_memory", 
-      "consolidated": "consolidated_memory"
+      "long_term": "long_term_memory"
     }
   },
   "embeddings": {

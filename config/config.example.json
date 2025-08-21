@@ -4,8 +4,7 @@
     "persist_directory": "./data/memory",
     "collections": {
       "short_term": "short_term_memory",
-      "long_term": "long_term_memory", 
-      "consolidated": "consolidated_memory"
+      "long_term": "long_term_memory"
     }
   },
   "embeddings": {
@@ -138,6 +137,23 @@
     "title": "Advanced Project Memory MCP Server",
     "version": "2.0.0",
     "protocol_version": "2025-06-18"
+  },
+  "deduplication": {
+    "_comment": "Memory deduplication configuration based on docs/memory-deduplication-proposal.md",
+    "enabled": true,
+    "similarity_threshold": 0.95,
+    "min_importance_diff": 0.1,
+    "preserve_high_access": true,
+    "collections": ["short_term", "long_term"],
+    "batch_processing": {
+      "enabled": true,
+      "interval_hours": 6,
+      "max_documents_per_batch": 1000
+    },
+    "ingestion_checking": {
+      "enabled": true,
+      "quick_threshold": 0.95
+    }
   },
   "logging": {
     "level": "INFO",

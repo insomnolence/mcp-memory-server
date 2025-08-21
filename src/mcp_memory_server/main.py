@@ -10,7 +10,8 @@ from mcp_memory_server.tools import (
     query_documents_tool, apply_reranking,
     get_memory_stats_tool, get_lifecycle_stats_tool,
     start_background_maintenance_tool, stop_background_maintenance_tool,
-    query_permanent_documents_tool, get_permanence_stats_tool
+    query_permanent_documents_tool, get_permanence_stats_tool,
+    deduplicate_memories_tool, get_deduplication_stats_tool, preview_duplicates_tool
 )
 
 
@@ -24,7 +25,8 @@ def main():
         db_config=config.get_database_config(),
         embeddings_config=config.get_embeddings_config(),
         memory_config=config.get_memory_management_config(),
-        scoring_config=config.get_memory_scoring_config()
+        scoring_config=config.get_memory_scoring_config(),
+        deduplication_config=config.get_deduplication_config()
     )
     
     # Initialize lifecycle manager (Phase 3)
@@ -46,6 +48,10 @@ def main():
         # Phase 3.5: Permanence Management Tools
         "query_permanent_documents": partial(query_permanent_documents_tool, memory_system),
         "get_permanence_stats": partial(get_permanence_stats_tool, memory_system),
+        # Phase 1: Deduplication Management Tools
+        "deduplicate_memories": partial(deduplicate_memories_tool, memory_system),
+        "get_deduplication_stats": partial(get_deduplication_stats_tool, memory_system),
+        "preview_duplicates": partial(preview_duplicates_tool, memory_system),
     }
     
     # Get tool definitions

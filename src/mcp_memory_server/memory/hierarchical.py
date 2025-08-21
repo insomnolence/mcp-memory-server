@@ -9,12 +9,13 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
 from .scorer import MemoryImportanceScorer
+from ..deduplication import MemoryDeduplicator
 
 
 class HierarchicalMemorySystem:
     """Four-tier hierarchical memory system with intelligent importance-based routing."""
     
-    def __init__(self, db_config: dict, embeddings_config: dict, memory_config: dict, scoring_config: dict):
+    def __init__(self, db_config: dict, embeddings_config: dict, memory_config: dict, scoring_config: dict, deduplication_config: dict = None):
         """Initialize the hierarchical memory system.
         
         Args:
@@ -22,6 +23,7 @@ class HierarchicalMemorySystem:
             embeddings_config: Embedding model configuration
             memory_config: Memory management configuration
             scoring_config: Scoring algorithm configuration
+            deduplication_config: Deduplication configuration
         """
         self.persist_directory = db_config.get('persist_directory', './chroma_db_advanced')
         self.collection_names = db_config.get('collections', {})
@@ -46,13 +48,6 @@ class HierarchicalMemorySystem:
                 persist_directory=self.persist_directory,
             )
             
-            self.consolidated_memory = Chroma(
-                collection_name=self.collection_names.get('consolidated', 'consolidated_memory'),
-                embedding_function=self.embedding_function,
-                persist_directory=self.persist_directory,
-            )
-            
-            
             logging.info(f"Successfully initialized all memory collections in {self.persist_directory}")
             
         except Exception as init_error:
@@ -60,6 +55,11 @@ class HierarchicalMemorySystem:
             raise RuntimeError(f"Memory system initialization failed: {init_error}") from init_error
         
         self.importance_scorer = MemoryImportanceScorer(scoring_config)
+        
+        # Initialize deduplication system
+        if deduplication_config is None:
+            deduplication_config = {'enabled': False}
+        self.deduplicator = MemoryDeduplicator(deduplication_config)
         
         # Maintenance settings from config
         self.short_term_max_size = memory_config.get('short_term_max_size', 100)
@@ -83,6 +83,33 @@ class HierarchicalMemorySystem:
             
         # Calculate importance score
         importance = self.importance_scorer.calculate_importance(content, metadata, context)
+        
+        # Check for duplicates during ingestion if deduplication is enabled
+        if self.deduplicator.enabled:
+            # First determine target collection to check against
+            temp_collection = (self.long_term_memory if importance > self.importance_threshold 
+                             else self.short_term_memory)
+            
+            action, existing_doc, similarity = self.deduplicator.check_ingestion_duplicates(
+                content, metadata, temp_collection
+            )
+            
+            if action == 'boost_existing' and existing_doc:
+                # Boost existing document instead of adding duplicate
+                updated_metadata = self.deduplicator.boost_existing_document(existing_doc, metadata)
+                logging.info(f"Boosted existing document instead of adding duplicate (similarity: {similarity:.3f})")
+                return {
+                    "success": True,
+                    "message": f"Boosted existing similar document instead of adding duplicate",
+                    "action": "boosted_existing",
+                    "similarity_score": similarity,
+                    "importance_score": importance,
+                    "collection": "existing",
+                    "chunks_added": 0
+                }
+            elif action == 'merge_content' and existing_doc:
+                # Could implement content merging here if desired
+                logging.info(f"Similar content detected (similarity: {similarity:.3f}), adding as new document")
         
         # Determine target collection
         if memory_type == "auto":
@@ -171,7 +198,7 @@ class HierarchicalMemorySystem:
             Dictionary containing formatted search results
         """
         if collections is None:
-            collections = ["short_term", "long_term", "consolidated"]
+            collections = ["short_term", "long_term"]
         
         all_results = []
         current_time = time.time()

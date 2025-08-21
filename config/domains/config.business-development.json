@@ -4,7 +4,6 @@
     "collections": {
       "short_term": "short_term_memory",
       "long_term": "long_term_memory", 
-      "consolidated": "consolidated_memory"
     }
   },
   "embeddings": {

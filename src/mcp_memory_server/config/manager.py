@@ -58,8 +58,7 @@ class Config:
                 "persist_directory": "./chroma_db_advanced",
                 "collections": {
                     "short_term": "short_term_memory",
-                    "long_term": "long_term_memory",
-                    "consolidated": "consolidated_memory"
+                    "long_term": "long_term_memory"
                 }
             },
             "embeddings": {
@@ -167,3 +166,7 @@ class Config:
     def get_lifecycle_config(self) -> dict:
         """Get lifecycle management configuration"""
         return self.get('lifecycle', default={})
+    
+    def get_deduplication_config(self) -> dict:
+        """Get deduplication configuration"""
+        return self.get('deduplication', default={'enabled': False})

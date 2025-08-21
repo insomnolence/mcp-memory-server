@@ -6,6 +6,10 @@ uvicorn
 chromadb
 sentence-transformers
 
+# Deduplication dependencies
+scikit-learn
+numpy
+
 # LangChain ecosystem for embeddings and text processing
 langchain-core
 langchain-community
