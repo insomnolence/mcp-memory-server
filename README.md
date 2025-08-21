@@ -3,22 +3,22 @@
 
 ---
 
-# Enhanced MCP Memory Server 🧠
+# Enhanced MCP Memory Server
 
 A personal project exploring intelligent hierarchical memory management for AI systems through the Model Context Protocol (MCP). Features an interactive configuration wizard, domain-agnostic design, and experimental lifecycle management. Born out of need to have a kind of "memory" for AI agents I was using, this helps keep context and knowlege from session to session.
 
-## ✨ Key Features
+## Key Features
 
-- **🧠 3-Tier Memory Architecture**: Short-term, long-term, and permanent memory collections
-- **⚙️ Configuration Wizard**: Interactive setup wizard with template support and guided configuration
-- **🌐 Universal Domain Support**: Works with ANY domain - business, research, creative, technical, etc.
-- **🎯 Intelligent Importance Scoring**: Multi-factor algorithm combining semantic similarity, recency, frequency, and domain patterns
-- **⏰ Automatic Lifecycle Management**: TTL-based expiration with importance-weighted aging and jitter
-- **🛡️ Permanence System**: Critical knowledge preservation with automatic and explicit permanence triggers
-- **🔧 Background Maintenance**: Automated cleanup and health monitoring
-- **🚀 FastAPI Implementation**: Modular architecture with MCP tools API
+- **3-Tier Memory Architecture**: Short-term, long-term, and permanent memory collections
+- **Configuration Wizard**: Interactive setup wizard with template support and guided configuration
+- **Universal Domain Support**: Works with ANY domain - business, research, creative, technical, etc.
+- **Intelligent Importance Scoring**: Multi-factor algorithm combining semantic similarity, recency, frequency, and domain patterns
+- **Automatic Lifecycle Management**: TTL-based expiration with importance-weighted aging and jitter
+- **Permanence System**: Critical knowledge preservation with automatic and explicit permanence triggers
+- **Background Maintenance**: Automated cleanup and health monitoring
+- **FastAPI Implementation**: Modular architecture with MCP tools API
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -57,7 +57,7 @@ python3 scripts/config_wizard.py template
 # 6. Maximum (extensive retention)
 ```
 
-## 🎛️ Configuration Options
+## Configuration Options
 
 ### Interactive Wizard
 ```bash
@@ -81,7 +81,7 @@ Edit `config.json` directly or use domain-specific configs in `config/domains/`:
 - `config.creative-writing.json` - Creative projects
 - `config.cooking.json` - Culinary domain
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 MCPServer/
@@ -106,7 +106,7 @@ MCPServer/
 └── docs/                    # Comprehensive documentation
 ```
 
-## 🛠️ MCP Tools API
+## MCP Tools API
 
 The server exposes comprehensive MCP tools for memory management:
 
@@ -124,7 +124,7 @@ The server exposes comprehensive MCP tools for memory management:
 - **`start_background_maintenance_tool`** - Enable automated maintenance processes
 - **`stop_background_maintenance_tool`** - Disable background maintenance
 
-## 🧠 Memory Architecture
+## Memory Architecture
 
 ### Four-Tier System
 1. **Short-term Memory** - Recent interactions with auto-pruning (default: 100 items)
@@ -144,7 +144,7 @@ The server exposes comprehensive MCP tools for memory management:
 - **Automatic Consolidation** - Related memories compressed into summaries
 - **Background Maintenance** - Continuous optimization without blocking operations
 
-## 🌐 Domain Examples
+## Domain Examples
 
 Configure for **any domain** with custom keywords - no code changes needed:
 
@@ -178,7 +178,7 @@ Configure for **any domain** with custom keywords - no code changes needed:
 
 **Works for**: Software development, creative writing, cooking, astronomy, fitness, music, law, medicine, education, and more.
 
-## 🔮 Upcoming Enhancements
+## Upcoming Enhancements
 
 ### Universal Embedding Providers (Next Release)
 Expanding beyond HuggingFace to support multiple embedding providers:
@@ -190,14 +190,14 @@ Expanding beyond HuggingFace to support multiple embedding providers:
 
 This enhancement will provide greater flexibility in deployment scenarios while maintaining backward compatibility.
 
-## 📊 Performance Characteristics
+## Performance Characteristics
 
 - **Storage Efficiency**: Intelligent lifecycle management reduces memory footprint
 - **Query Speed**: Fast semantic search with reranking
 - **Memory Consolidation**: Automatic clustering to preserve knowledge while saving space
 - **Configuration Validation**: Built-in validation to catch configuration issues
 
-## 🧪 Experimentation & Testing
+## Experimentation & Testing
 
 ### Validation
 ```bash
@@ -220,7 +220,7 @@ python3 scripts/config_wizard.py template
 MCP_DOMAIN=research python3 scripts/start_server.py
 ```
 
-## 📚 Documentation
+## Documentation
 
 - **`docs/configuration.md`** - Complete configuration guide and manual setup
 - **`docs/configuration-wizard-enhanced.md`** - Configuration wizard features and usage
@@ -229,14 +229,14 @@ MCP_DOMAIN=research python3 scripts/start_server.py
 - **`client-examples/`** - Ready-to-use configurations for Claude Code CLI and other clients
 - **`docs/README.md`** - Complete documentation index
 
-## 🤝 Client Integration
+## Client Integration
 
 The server works with any MCP-compatible client. Example configurations provided for:
 - **Claude Code CLI** - Complete setup scripts included
 - **Gemini CLI** - Full integration examples
 - **Custom Clients** - Comprehensive MCP protocol implementation
 
-## 🔧 Advanced Usage
+## Advanced Usage
 
 ### Different Configurations
 ```bash
@@ -256,7 +256,7 @@ python3 scripts/start_server.py --config custom-config.json
 - **Memory Statistics** - Built-in tools to monitor system usage
 - **Validation Tools** - Configuration checking and server health
 
-## 🚀 Future Enhancements
+## Future Enhancements
 
 ### Planned Features
 - **Memory Consolidation** - Automatic summarization and compression of related memories

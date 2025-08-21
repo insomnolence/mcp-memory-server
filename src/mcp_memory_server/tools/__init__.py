@@ -1,4 +1,4 @@
-from .document import add_document_tool, legacy_add_document_tool
+from .document import add_document_tool
 from .query import query_documents_tool, apply_reranking
 from .stats import get_memory_stats_tool, get_system_health_tool
 from .lifecycle import (
@@ -11,7 +11,7 @@ from .permanence import (
 )
 
 __all__ = [
-    'add_document_tool', 'legacy_add_document_tool',
+    'add_document_tool',
     'query_documents_tool', 'apply_reranking',
     'get_memory_stats_tool', 'get_system_health_tool',
     'get_lifecycle_stats_tool', 'cleanup_expired_memories_tool',

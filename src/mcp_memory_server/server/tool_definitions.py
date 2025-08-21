@@ -56,7 +56,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     },
                     "collections": {
                         "type": "string",
-                        "description": "Comma-separated list of collections to search ('short_term', 'long_term', 'consolidated', 'legacy'). Default: all collections."
+                        "description": "Comma-separated list of collections to search ('short_term', 'long_term', 'consolidated'). Default: all collections."
                     },
                     "k": {
                         "type": "integer",
@@ -81,31 +81,6 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                 "type": "object",
                 "properties": {},
                 "required": []
-            }
-        },
-        {
-            "name": "legacy_add_document",
-            "description": "Adds a document to the legacy collection for backward compatibility with existing data.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "content": {
-                        "type": "string",
-                        "description": "The full text content of the document to be added."
-                    },
-                    "metadata": {
-                        "type": "object",
-                        "description": "Optional metadata to associate with the document chunks.",
-                        "default": {}
-                    },
-                    "language": {
-                        "type": "string",
-                        "description": "The programming language or format of the content.",
-                        "default": "text",
-                        "enum": ["python", "c++", "markdown", "text"]
-                    }
-                },
-                "required": ["content"]
             }
         },
         {

@@ -52,12 +52,6 @@ class HierarchicalMemorySystem:
                 persist_directory=self.persist_directory,
             )
             
-            # Legacy collection for backward compatibility
-            self.legacy_memory = Chroma(
-                collection_name=self.collection_names.get('legacy', 'knowledge_base'),
-                embedding_function=self.embedding_function,
-                persist_directory=self.persist_directory,
-            )
             
             logging.info(f"Successfully initialized all memory collections in {self.persist_directory}")
             
@@ -177,7 +171,7 @@ class HierarchicalMemorySystem:
             Dictionary containing formatted search results
         """
         if collections is None:
-            collections = ["short_term", "long_term", "consolidated", "legacy"]
+            collections = ["short_term", "long_term", "consolidated"]
         
         all_results = []
         current_time = time.time()
@@ -350,7 +344,7 @@ class HierarchicalMemorySystem:
                 chunk_id = metadata.get('chunk_id')
                 collection_name = result['collection']
                 
-                if chunk_id and collection_name != "legacy":
+                if chunk_id:
                     collection = getattr(self, f"{collection_name}_memory")
                     
                     # Update metadata (this is a simplified approach)

@@ -6,7 +6,7 @@ from mcp_memory_server.config import Config
 from mcp_memory_server.memory import HierarchicalMemorySystem, LifecycleManager
 from mcp_memory_server.server import create_app, setup_json_rpc_handler, get_tool_definitions
 from mcp_memory_server.tools import (
-    add_document_tool, legacy_add_document_tool,
+    add_document_tool,
     query_documents_tool, apply_reranking,
     get_memory_stats_tool, get_lifecycle_stats_tool,
     start_background_maintenance_tool, stop_background_maintenance_tool,
@@ -34,15 +34,11 @@ def main():
     reranker_config = config.get_reranker_config()
     reranker_model = CrossEncoder(reranker_config.get('model_name', 'cross-encoder/ms-marco-MiniLM-L-6-v2'))
     
-    # Legacy vectorstore for backward compatibility
-    vectorstore = memory_system.legacy_memory
-    
     # Create tool registry with dependency injection
     tool_registry = {
         "add_document": partial(add_document_tool, memory_system),
         "query_documents": partial(query_documents_with_reranking, memory_system, reranker_model),
         "get_memory_stats": partial(get_memory_stats_tool, memory_system),
-        "legacy_add_document": partial(legacy_add_document_tool, vectorstore, config),
         # Phase 3: Lifecycle Management Tools
         "get_lifecycle_stats": partial(get_lifecycle_stats_tool, lifecycle_manager),
         "start_background_maintenance": partial(start_background_maintenance_tool, lifecycle_manager),

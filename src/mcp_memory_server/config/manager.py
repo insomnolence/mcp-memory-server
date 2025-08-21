@@ -59,8 +59,7 @@ class Config:
                 "collections": {
                     "short_term": "short_term_memory",
                     "long_term": "long_term_memory",
-                    "consolidated": "consolidated_memory",
-                    "legacy": "knowledge_base"
+                    "consolidated": "consolidated_memory"
                 }
             },
             "embeddings": {
