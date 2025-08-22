@@ -191,5 +191,52 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                 },
                 "required": []
             }
+        },
+        {
+            "name": "get_query_performance",
+            "description": "Get comprehensive query performance statistics including response times, quality metrics, and deduplication impact for analysis and optimization.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "time_window": {
+                        "type": "string",
+                        "description": "Time window for performance statistics.",
+                        "enum": ["hour", "day", "week", "all"],
+                        "default": "day"
+                    }
+                },
+                "required": []
+            }
+        },
+        {
+            "name": "get_real_time_metrics",
+            "description": "Get real-time performance metrics and system status indicators including current query rates, response health, and system load.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        },
+        {
+            "name": "export_performance_data",
+            "description": "Export performance monitoring data in various formats for external analysis, reporting, or archival purposes.",
+            "inputSchema": {
+                "type": "object", 
+                "properties": {
+                    "format": {
+                        "type": "string",
+                        "description": "Export format for performance data.",
+                        "enum": ["json", "dict", "csv"],
+                        "default": "json"
+                    },
+                    "time_window": {
+                        "type": "string",
+                        "description": "Time window for data export.",
+                        "enum": ["hour", "day", "week", "all"],
+                        "default": "all"
+                    }
+                },
+                "required": []
+            }
         }
     ]

@@ -8,6 +8,7 @@ import threading
 
 from .hierarchical import HierarchicalMemorySystem
 from .scorer import MemoryImportanceScorer
+from .progressive_cleanup import ProgressiveCleanupManager
 
 
 class TTLManager:
@@ -262,6 +263,10 @@ class LifecycleManager:
         # Initialize sub-managers
         self.ttl_manager = TTLManager(lifecycle_config.get('ttl', {}))
         self.aging = MemoryAging(lifecycle_config.get('aging', {}))
+        self.progressive_cleanup = ProgressiveCleanupManager(
+            memory_system, 
+            lifecycle_config.get('progressive_cleanup', {})
+        )
         
         # Maintenance configuration
         self.maintenance_config = lifecycle_config.get('maintenance', {})
@@ -537,14 +542,22 @@ class LifecycleManager:
     def _scheduled_deep_maintenance(self):
         """Scheduled deep maintenance task."""
         logging.info("Running scheduled deep maintenance")
-        # Cleanup + aging refresh + statistics
+        
+        # Phase 1: Traditional cleanup + aging refresh
         cleanup = self.cleanup_expired_documents()
         aging = self.refresh_aging_scores()
+        
+        # Phase 2: Progressive cleanup (daily/weekly/monthly phases)
+        progressive_result = self.progressive_cleanup.run_scheduled_cleanup()
+        
+        # Phase 3: Statistics collection
         stats = self.memory_system.get_collection_stats()
         
         logging.info(f"Deep maintenance complete: "
-                    f"cleaned {cleanup['total_expired']}, "
+                    f"expired {cleanup['total_expired']}, "
                     f"refreshed {aging['total_refreshed']}, "
+                    f"progressive cleanup: {progressive_result.get('total_documents_removed', 0)} removed, "
+                    f"phases executed: {len(progressive_result.get('phases_executed', []))}, "
                     f"collections: {len(stats.get('collections', {}))}")
     
     def get_lifecycle_stats(self) -> Dict[str, Any]:
@@ -583,5 +596,8 @@ class LifecycleManager:
         # Add collection-specific lifecycle info
         memory_stats = self.memory_system.get_collection_stats()
         stats['collections'] = memory_stats.get('collections', {})
+        
+        # Add progressive cleanup status
+        stats['progressive_cleanup'] = self.progressive_cleanup.get_cleanup_status()
         
         return stats

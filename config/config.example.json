@@ -100,7 +100,22 @@
     "consolidation_threshold": 50,
     "maintenance_interval_hours": 1,
     "consolidation_interval_hours": 6,
-    "stats_interval_hours": 24
+    "stats_interval_hours": 24,
+    "query_monitoring": {
+      "_comment": "Phase 2: Query performance monitoring configuration",
+      "history_size": 1000,
+      "track_user_satisfaction": true,
+      "enable_real_time_metrics": true,
+      "aggregation_intervals": {
+        "hourly": 3600,
+        "daily": 86400
+      },
+      "performance_thresholds": {
+        "fast_query_ms": 100,
+        "slow_query_ms": 1000,
+        "good_result_quality": 0.8
+      }
+    }
   },
   "lifecycle": {
     "_comment": "Phase 3: Lifecycle Management & TTL Configuration",
@@ -129,6 +144,27 @@
       "consolidation_interval_hours": 6,
       "statistics_interval_hours": 24,
       "deep_maintenance_interval_hours": 168
+    },
+    "progressive_cleanup": {
+      "_comment": "Phase 2: Progressive cleanup configuration for multi-phase maintenance",
+      "daily": {
+        "interval_hours": 24,
+        "max_processing_time_seconds": 30,
+        "duplicate_threshold": 0.95,
+        "enabled": true
+      },
+      "weekly": {
+        "interval_hours": 168,
+        "max_processing_time_seconds": 300,
+        "similarity_threshold": 0.75,
+        "enabled": true
+      },
+      "monthly": {
+        "interval_hours": 720,
+        "max_processing_time_seconds": 1800,
+        "deep_analysis_enabled": true,
+        "enabled": true
+      }
     }
   },
   "server": {

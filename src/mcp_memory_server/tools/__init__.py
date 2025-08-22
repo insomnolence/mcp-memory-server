@@ -12,6 +12,9 @@ from .permanence import (
 from .deduplication import (
     deduplicate_memories_tool, get_deduplication_stats_tool, preview_duplicates_tool
 )
+from .performance import (
+    get_query_performance_tool, get_real_time_metrics_tool, export_performance_data_tool
+)
 
 __all__ = [
     'add_document_tool',
@@ -21,5 +24,6 @@ __all__ = [
     'refresh_memory_aging_tool', 'start_background_maintenance_tool',
     'stop_background_maintenance_tool',
     'query_permanent_documents_tool', 'get_permanence_stats_tool',
-    'deduplicate_memories_tool', 'get_deduplication_stats_tool', 'preview_duplicates_tool'
+    'deduplicate_memories_tool', 'get_deduplication_stats_tool', 'preview_duplicates_tool',
+    'get_query_performance_tool', 'get_real_time_metrics_tool', 'export_performance_data_tool'
 ]

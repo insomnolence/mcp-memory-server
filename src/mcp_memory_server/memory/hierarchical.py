@@ -9,6 +9,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
 from .scorer import MemoryImportanceScorer
+from .query_monitor import QueryPerformanceMonitor
 from ..deduplication import MemoryDeduplicator
 
 
@@ -60,6 +61,9 @@ class HierarchicalMemorySystem:
         if deduplication_config is None:
             deduplication_config = {'enabled': False}
         self.deduplicator = MemoryDeduplicator(deduplication_config)
+        
+        # Initialize query performance monitor
+        self.query_monitor = QueryPerformanceMonitor(memory_config.get('query_monitoring', {}))
         
         # Maintenance settings from config
         self.short_term_max_size = memory_config.get('short_term_max_size', 100)
@@ -186,32 +190,45 @@ class HierarchicalMemorySystem:
                 "error": str(db_error)
             }
     
-    def query_memories(self, query: str, collections: List[str] = None, k: int = 5) -> dict:
-        """Query across memory collections with intelligent scoring.
+    def query_memories(self, query: str, collections: List[str] = None, k: int = 5, use_smart_routing: bool = True) -> dict:
+        """Query across memory collections with deduplication-aware intelligent routing.
         
         Args:
             query: Search query string
-            collections: List of collection names to search (default: all)
+            collections: List of collection names to search (default: smart routing)
             k: Maximum number of results to return
+            use_smart_routing: Whether to use deduplication-aware smart routing
             
         Returns:
             Dictionary containing formatted search results
         """
-        if collections is None:
-            collections = ["short_term", "long_term"]
+        # Start performance tracking
+        start_time = time.time()
+        current_time = start_time
+        
+        # Use smart routing if enabled and collections not explicitly specified
+        if use_smart_routing and collections is None:
+            collections, collection_limits, effective_k = self._smart_query_routing(query, k)
+        else:
+            if collections is None:
+                collections = ["short_term", "long_term"]
+            collection_limits = [k // len(collections)] * len(collections)
+            effective_k = k
         
         all_results = []
-        current_time = time.time()
         
-        # Query each specified collection
-        for collection_name in collections:
+        # Query each collection with smart limits
+        for i, collection_name in enumerate(collections):
             collection = getattr(self, f"{collection_name}_memory", None)
             if collection is None:
                 continue
                 
+            # Use collection-specific limits from smart routing
+            collection_k = collection_limits[i] if i < len(collection_limits) else effective_k
+            search_k = max(collection_k * 2, 10)  # Get extra candidates for better ranking
+                
             try:
-                # Get more candidates for reranking
-                initial_docs = collection.similarity_search_with_score(query, k=20)
+                initial_docs = collection.similarity_search_with_score(query, k=search_k)
                 
                 for doc, distance in initial_docs:
                     memory_data = {
@@ -221,8 +238,8 @@ class HierarchicalMemorySystem:
                         'collection': collection_name
                     }
                     
-                    # Calculate retrieval score
-                    retrieval_score = self.importance_scorer.calculate_retrieval_score(
+                    # Enhanced retrieval score with deduplication awareness
+                    retrieval_score = self._calculate_enhanced_retrieval_score(
                         memory_data, query, current_time
                     )
                     memory_data['retrieval_score'] = retrieval_score
@@ -235,24 +252,156 @@ class HierarchicalMemorySystem:
         
         # Sort by retrieval score and take top k
         all_results.sort(key=lambda x: x['retrieval_score'], reverse=True)
-        top_results = all_results[:k]
+        top_results = all_results[:effective_k]
         
         # Update access statistics for retrieved memories
         self._update_access_stats(top_results)
         
-        # Format for MCP response
+        # Format for MCP response with enhanced metadata
         content_blocks = []
         for result in top_results:
+            # Add deduplication information if available
+            dedup_info = ""
+            if result['metadata'].get('duplicate_sources'):
+                dedup_info = f" | Merged from {len(result['metadata']['duplicate_sources'])} sources"
+            
             content_blocks.append({
                 "type": "text",
-                "text": f"**Score: {result['retrieval_score']:.3f} | Collection: {result['collection']}**\n\n{result['document']}\n\n**Metadata:** {result['metadata']}"
+                "text": f"**Score: {result['retrieval_score']:.3f} | Collection: {result['collection']}{dedup_info}**\n\n{result['document']}\n\n**Metadata:** {result['metadata']}"
             })
         
-        return {
+        # Calculate processing time and create results
+        processing_time = time.time() - start_time
+        
+        results = {
             "content": content_blocks,
             "total_results": len(all_results),
-            "collections_searched": collections
+            "collections_searched": collections,
+            "smart_routing_used": use_smart_routing and collections != ["short_term", "long_term"],
+            "query_optimization_applied": use_smart_routing,
+            "processing_time_ms": processing_time * 1000
         }
+        
+        # Track query performance
+        try:
+            query_metadata = {
+                'effective_k': effective_k,
+                'original_k': k,
+                'collection_limits': collection_limits
+            }
+            self.query_monitor.track_query(query, results, processing_time, query_metadata)
+        except Exception as e:
+            logging.warning(f"Failed to track query performance: {e}")
+        
+        return results
+    
+    def _smart_query_routing(self, query: str, k: int) -> tuple:
+        """Deduplication-aware smart query routing."""
+        # Estimate query importance
+        query_importance = self._estimate_query_importance(query)
+        
+        # Get deduplication statistics for routing decisions
+        dedup_stats = {}
+        if hasattr(self, 'deduplicator') and self.deduplicator.enabled:
+            dedup_stats = self.deduplicator.get_deduplication_stats()
+        
+        # Adjust k based on deduplication effectiveness
+        effective_k = self._adjust_k_for_deduplication(k, dedup_stats)
+        
+        # Route based on importance and deduplication quality
+        if query_importance > 0.8:
+            # High-importance: long-term has higher quality post-deduplication
+            search_order = ['long_term', 'short_term']
+            collection_limits = [effective_k // 2 + 1, effective_k // 2]
+        elif query_importance > 0.5:
+            # Medium-importance: balanced approach
+            search_order = ['short_term', 'long_term'] 
+            collection_limits = [effective_k // 2, effective_k // 2]
+        else:
+            # Low-importance: short-term first, but with deduplication benefits
+            search_order = ['short_term', 'long_term']
+            collection_limits = [effective_k // 2 + 1, effective_k // 2]
+        
+        return search_order, collection_limits, effective_k
+    
+    def _estimate_query_importance(self, query: str) -> float:
+        """Estimate query importance based on content patterns."""
+        # Basic importance estimation
+        importance = 0.5  # Default medium importance
+        
+        # Boost for technical/specific terms
+        technical_patterns = ['error', 'bug', 'implementation', 'algorithm', 'function', 'class', 'method']
+        if any(pattern in query.lower() for pattern in technical_patterns):
+            importance += 0.2
+        
+        # Boost for question words indicating detailed requests
+        question_patterns = ['how', 'why', 'what', 'where', 'when', 'which']
+        if any(pattern in query.lower() for pattern in question_patterns):
+            importance += 0.1
+        
+        # Boost for longer, more detailed queries
+        if len(query.split()) > 10:
+            importance += 0.1
+        elif len(query.split()) > 5:
+            importance += 0.05
+        
+        # Check if query matches common deduplication patterns
+        if hasattr(self, 'deduplicator') and self.deduplicator.enabled:
+            if self._matches_common_dedup_patterns(query):
+                importance += 0.1  # Boost for common patterns that benefit from deduplication
+        
+        return min(importance, 1.0)
+    
+    def _matches_common_dedup_patterns(self, query: str) -> bool:
+        """Check if query matches patterns commonly found in deduplicated content."""
+        try:
+            # This could be enhanced to check against actual deduplication patterns
+            # For now, use simple heuristics
+            common_patterns = ['duplicate', 'similar', 'same', 'identical', 'repeated']
+            return any(pattern in query.lower() for pattern in common_patterns)
+        except:
+            return False
+    
+    def _adjust_k_for_deduplication(self, requested_k: int, dedup_stats: dict) -> int:
+        """Adjust search parameters based on deduplication effectiveness."""
+        if not dedup_stats:
+            return requested_k
+        
+        # Get deduplication effectiveness
+        effectiveness = dedup_stats.get('deduplication_efficiency', 0) / 100.0
+        
+        if effectiveness > 0.3:
+            # High deduplication means higher quality results, can use smaller k
+            return max(requested_k - 2, 3)
+        elif effectiveness > 0.1:
+            # Moderate deduplication
+            return max(requested_k - 1, 3) 
+        else:
+            # Low deduplication, maintain original k
+            return requested_k
+    
+    def _calculate_enhanced_retrieval_score(self, memory_data: dict, query: str, current_time: float) -> float:
+        """Calculate retrieval score with deduplication awareness."""
+        # Base retrieval score
+        base_score = self.importance_scorer.calculate_retrieval_score(
+            memory_data, query, current_time
+        )
+        
+        # Deduplication boost for merged documents
+        dedup_boost = 0.0
+        metadata = memory_data.get('metadata', {})
+        
+        if metadata.get('duplicate_sources'):
+            # Documents that were merged from duplicates likely have higher quality
+            source_count = len(metadata['duplicate_sources'])
+            dedup_boost = min(source_count * 0.02, 0.1)  # Up to 10% boost
+        
+        # Boost for documents with high similarity scores (indicates they were well-matched)
+        similarity_score = metadata.get('similarity_score', 0)
+        if similarity_score > 0.9:
+            dedup_boost += 0.05  # 5% boost for high-confidence matches
+        
+        return min(base_score + dedup_boost, 1.0)
     
     def _chunk_content(self, content: str, language: str = "text") -> List[str]:
         """Chunk content based on language type.
@@ -283,7 +432,7 @@ class HierarchicalMemorySystem:
         return splitter.split_text(content)
     
     def _maintain_short_term_memory(self):
-        """Maintain short-term memory collection size."""
+        """Enhanced memory maintenance with deduplication-aware cleanup."""
         try:
             # Get current document count efficiently
             if hasattr(self.short_term_memory, '_collection'):
@@ -299,8 +448,21 @@ class HierarchicalMemorySystem:
                 
             # Calculate how many documents to remove
             excess_count = current_count - self.short_term_max_size
-            logging.info(f"Short-term memory over limit: {current_count}/{self.short_term_max_size}, removing {excess_count} oldest documents")
+            logging.info(f"Short-term memory over limit: {current_count}/{self.short_term_max_size}, removing {excess_count} documents")
             
+            # Enhanced cleanup with deduplication awareness
+            docs_to_remove = self._smart_cleanup_selection(excess_count)
+            
+            if docs_to_remove:
+                self._remove_documents_from_collection(self.short_term_memory, docs_to_remove)
+                logging.info(f"Successfully completed smart cleanup of {len(docs_to_remove)} documents")
+            
+        except Exception as e:
+            logging.warning(f"Short-term memory maintenance error: {e}")
+    
+    def _smart_cleanup_selection(self, target_removal_count: int) -> List[Document]:
+        """Enhanced cleanup selection using deduplication-aware strategies."""
+        try:
             # Get all documents with metadata efficiently  
             if hasattr(self.short_term_memory, '_collection'):
                 chroma_result = self.short_term_memory._collection.get()
@@ -318,44 +480,177 @@ class HierarchicalMemorySystem:
                     all_docs.append(Document(page_content=content, metadata=metadata))
             else:
                 # Fallback to similarity search if direct access unavailable
-                all_docs = self.short_term_memory.similarity_search("", k=current_count)
+                all_docs = self.short_term_memory.similarity_search("", k=1000)
             
-            # Sort by timestamp (oldest first) - documents should have 'timestamp' in metadata
-            docs_with_age = []
-            for doc in all_docs:
-                timestamp = doc.metadata.get('timestamp', 0)
-                access_count = doc.metadata.get('access_count', 0)
-                # Prefer removing older and less accessed documents
-                priority_score = timestamp + (access_count * 86400)  # Weight access count as days
-                docs_with_age.append((priority_score, doc))
+            if len(all_docs) <= target_removal_count:
+                return all_docs[:target_removal_count]
             
-            # Sort by priority (lower score = older/less accessed = higher removal priority)
-            docs_with_age.sort(key=lambda x: x[0])
+            # Phase 1: Remove exact duplicates using deduplication system
+            removal_candidates = []
+            if self.deduplicator.enabled:
+                try:
+                    # Find duplicates within the collection
+                    duplicates = self.deduplicator.similarity_calculator.find_duplicates_batch(
+                        [{'content': doc.page_content, 'metadata': doc.metadata, 'document': doc} 
+                         for doc in all_docs],
+                        threshold=0.95  # High threshold for exact duplicates
+                    )
+                    
+                    # Add lower-quality duplicates to removal candidates
+                    for doc1_data, doc2_data, similarity in duplicates:
+                        doc1, doc2 = doc1_data['document'], doc2_data['document']
+                        worse_doc = self._choose_worse_document(doc1, doc2)
+                        if worse_doc not in removal_candidates:
+                            removal_candidates.append(worse_doc)
+                            logging.debug(f"Marked duplicate document for removal (similarity: {similarity:.3f})")
+                            
+                except Exception as dedup_error:
+                    logging.warning(f"Deduplication cleanup failed: {dedup_error}")
             
-            # Remove oldest documents
-            docs_to_remove = [doc for _, doc in docs_with_age[:excess_count]]
+            # Phase 2: If we still need to remove more, use similarity clustering
+            remaining_needed = target_removal_count - len(removal_candidates)
+            if remaining_needed > 0:
+                remaining_docs = [doc for doc in all_docs if doc not in removal_candidates]
+                cluster_removals = self._similarity_cluster_cleanup(remaining_docs, remaining_needed)
+                removal_candidates.extend(cluster_removals)
             
-            # ChromaDB delete requires document IDs
-            if hasattr(self.short_term_memory, '_collection'):
-                ids_to_delete = []
-                for doc in docs_to_remove:
-                    # Use the ChromaDB ID we stored in metadata, fallback to hash
-                    doc_id = doc.metadata.get('chroma_id') or doc.metadata.get('id') or str(hash(doc.page_content))
-                    ids_to_delete.append(doc_id)
-                
-                if ids_to_delete:
-                    try:
-                        self.short_term_memory._collection.delete(ids=ids_to_delete)
-                        logging.info(f"Successfully removed {len(ids_to_delete)} old documents from short-term memory")
-                    except Exception as delete_error:
-                        logging.warning(f"Could not delete documents: {delete_error}")
-                        # Fallback: clear collection if individual deletes fail
-                        logging.warning("Attempting collection reset as fallback")
-                        self.short_term_memory._collection.delete()
-                        logging.warning("Short-term memory collection cleared due to maintenance issues")
+            # Phase 3: If still need more, fall back to traditional age-based cleanup
+            remaining_needed = target_removal_count - len(removal_candidates)
+            if remaining_needed > 0:
+                remaining_docs = [doc for doc in all_docs if doc not in removal_candidates]
+                age_based_removals = self._age_based_cleanup(remaining_docs, remaining_needed)
+                removal_candidates.extend(age_based_removals)
+            
+            return removal_candidates[:target_removal_count]
             
         except Exception as e:
-            logging.warning(f"Short-term memory maintenance error: {e}")
+            logging.warning(f"Smart cleanup selection failed: {e}")
+            # Fallback to simple age-based cleanup
+            return self._age_based_cleanup(all_docs, target_removal_count)
+    
+    def _choose_worse_document(self, doc1: Document, doc2: Document) -> Document:
+        """Choose the worse document from a duplicate pair."""
+        def doc_quality_score(doc):
+            metadata = doc.metadata
+            return (
+                metadata.get('importance_score', 0) * 0.5 +
+                metadata.get('access_count', 0) * 0.3 + 
+                (metadata.get('timestamp', 0) / 86400) * 0.2  # Recency bonus (days)
+            )
+        
+        return doc1 if doc_quality_score(doc1) < doc_quality_score(doc2) else doc2
+    
+    def _similarity_cluster_cleanup(self, documents: List[Document], target_count: int) -> List[Document]:
+        """Find similar document clusters and remove lower-quality documents."""
+        if not self.deduplicator.enabled or len(documents) < 2:
+            return []
+            
+        try:
+            # Find similarity clusters at a lower threshold
+            similar_pairs = self.deduplicator.similarity_calculator.find_duplicates_batch(
+                [{'content': doc.page_content, 'metadata': doc.metadata, 'document': doc} 
+                 for doc in documents],
+                threshold=0.75  # Lower threshold for similarity clustering
+            )
+            
+            # Group similar documents into clusters
+            clusters = self._group_into_clusters(similar_pairs)
+            
+            removal_candidates = []
+            for cluster in clusters:
+                if len(cluster) > 1:
+                    # Sort cluster by quality, remove all but the best
+                    cluster.sort(key=lambda doc: (
+                        doc.metadata.get('importance_score', 0) * 0.4 +
+                        doc.metadata.get('access_count', 0) * 0.3 +
+                        (time.time() - doc.metadata.get('timestamp', 0)) / -86400 * 0.3  # Newer is better
+                    ), reverse=True)
+                    
+                    # Add all but the best document to removal candidates
+                    for doc in cluster[1:]:
+                        age_days = (time.time() - doc.metadata.get('timestamp', 0)) / 86400
+                        if age_days > 1:  # Don't remove very recent content
+                            removal_candidates.append(doc)
+                            if len(removal_candidates) >= target_count:
+                                break
+                
+                if len(removal_candidates) >= target_count:
+                    break
+            
+            return removal_candidates[:target_count]
+            
+        except Exception as e:
+            logging.warning(f"Similarity cluster cleanup failed: {e}")
+            return []
+    
+    def _group_into_clusters(self, similar_pairs: List[tuple]) -> List[List[Document]]:
+        """Group similar document pairs into clusters."""
+        clusters = []
+        doc_to_cluster = {}
+        
+        for doc1_data, doc2_data, similarity in similar_pairs:
+            doc1, doc2 = doc1_data['document'], doc2_data['document']
+            
+            cluster1 = doc_to_cluster.get(id(doc1))
+            cluster2 = doc_to_cluster.get(id(doc2))
+            
+            if cluster1 is None and cluster2 is None:
+                # Create new cluster
+                new_cluster = [doc1, doc2]
+                clusters.append(new_cluster)
+                doc_to_cluster[id(doc1)] = new_cluster
+                doc_to_cluster[id(doc2)] = new_cluster
+            elif cluster1 is None:
+                # Add doc1 to doc2's cluster
+                cluster2.append(doc1)
+                doc_to_cluster[id(doc1)] = cluster2
+            elif cluster2 is None:
+                # Add doc2 to doc1's cluster
+                cluster1.append(doc2)
+                doc_to_cluster[id(doc2)] = cluster1
+            elif cluster1 != cluster2:
+                # Merge clusters
+                cluster1.extend(cluster2)
+                for doc in cluster2:
+                    doc_to_cluster[id(doc)] = cluster1
+                clusters.remove(cluster2)
+        
+        return clusters
+    
+    def _age_based_cleanup(self, documents: List[Document], target_count: int) -> List[Document]:
+        """Traditional age-based cleanup as fallback."""
+        docs_with_age = []
+        for doc in documents:
+            timestamp = doc.metadata.get('timestamp', 0)
+            access_count = doc.metadata.get('access_count', 0)
+            # Prefer removing older and less accessed documents
+            priority_score = timestamp + (access_count * 86400)  # Weight access count as days
+            docs_with_age.append((priority_score, doc))
+        
+        # Sort by priority (lower score = older/less accessed = higher removal priority)
+        docs_with_age.sort(key=lambda x: x[0])
+        
+        return [doc for _, doc in docs_with_age[:target_count]]
+    
+    def _remove_documents_from_collection(self, collection, docs_to_remove: List[Document]):
+        """Remove documents from the specified collection."""
+        if hasattr(collection, '_collection'):
+            ids_to_delete = []
+            for doc in docs_to_remove:
+                # Use the ChromaDB ID we stored in metadata, fallback to hash
+                doc_id = doc.metadata.get('chroma_id') or doc.metadata.get('id') or str(hash(doc.page_content))
+                ids_to_delete.append(doc_id)
+            
+            if ids_to_delete:
+                try:
+                    collection._collection.delete(ids=ids_to_delete)
+                    logging.debug(f"Successfully removed {len(ids_to_delete)} documents")
+                except Exception as delete_error:
+                    logging.warning(f"Could not delete documents: {delete_error}")
+                    # Fallback: clear collection if individual deletes fail
+                    logging.warning("Attempting collection reset as fallback")
+                    collection._collection.delete()
+                    logging.warning("Collection cleared due to maintenance issues")
     
     def _update_access_stats(self, results: List[dict]):
         """Update access statistics for retrieved memories.
@@ -425,3 +720,18 @@ class HierarchicalMemorySystem:
                 }
         
         return stats
+    
+    def get_query_performance_stats(self, time_window: str = 'all') -> Dict[str, Any]:
+        """Get query performance statistics.
+        
+        Args:
+            time_window: Time window for statistics ('hour', 'day', 'week', 'all')
+            
+        Returns:
+            Query performance statistics
+        """
+        try:
+            return self.query_monitor.get_performance_summary(time_window)
+        except Exception as e:
+            logging.warning(f"Failed to get query performance stats: {e}")
+            return {'error': str(e), 'message': 'Query monitoring not available'}

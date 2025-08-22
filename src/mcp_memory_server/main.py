@@ -11,7 +11,8 @@ from mcp_memory_server.tools import (
     get_memory_stats_tool, get_lifecycle_stats_tool,
     start_background_maintenance_tool, stop_background_maintenance_tool,
     query_permanent_documents_tool, get_permanence_stats_tool,
-    deduplicate_memories_tool, get_deduplication_stats_tool, preview_duplicates_tool
+    deduplicate_memories_tool, get_deduplication_stats_tool, preview_duplicates_tool,
+    get_query_performance_tool, get_real_time_metrics_tool, export_performance_data_tool
 )
 
 
@@ -52,6 +53,10 @@ def main():
         "deduplicate_memories": partial(deduplicate_memories_tool, memory_system),
         "get_deduplication_stats": partial(get_deduplication_stats_tool, memory_system),
         "preview_duplicates": partial(preview_duplicates_tool, memory_system),
+        # Phase 2: Performance Monitoring Tools
+        "get_query_performance": partial(get_query_performance_tool, memory_system),
+        "get_real_time_metrics": partial(get_real_time_metrics_tool, memory_system),
+        "export_performance_data": partial(export_performance_data_tool, memory_system),
     }
     
     # Get tool definitions
