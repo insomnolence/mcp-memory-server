@@ -97,9 +97,7 @@
   },
   "memory_management": {
     "short_term_max_size": 100,
-    "consolidation_threshold": 50,
     "maintenance_interval_hours": 1,
-    "consolidation_interval_hours": 6,
     "stats_interval_hours": 24,
     "query_monitoring": {
       "_comment": "Phase 2: Query performance monitoring configuration",
@@ -141,7 +139,6 @@
       "_comment": "Background maintenance scheduling",
       "enabled": true,
       "cleanup_interval_hours": 1,
-      "consolidation_interval_hours": 6,
       "statistics_interval_hours": 24,
       "deep_maintenance_interval_hours": 168
     },
@@ -189,7 +186,85 @@
     "ingestion_checking": {
       "enabled": true,
       "quick_threshold": 0.95
+    },
+    "advanced_features": {
+      "_comment": "Phase 3: Advanced deduplication features with domain awareness and semantic clustering",
+      "domain_awareness": {
+        "enabled": true,
+        "domain_thresholds": {
+          "code": 0.98,
+          "text": 0.92,
+          "data": 0.96,
+          "documentation": 0.90
+        },
+        "classification_keywords": {
+          "code": ["function", "def", "class", "import", "return", "if", "for", "while", "{", "}", "()", "[]"],
+          "text": ["the", "and", "or", "but", "however", "therefore", "because", "since"],
+          "data": ["data", "json", "csv", "table", "row", "column", "field", "value", "record"],
+          "documentation": ["readme", "guide", "manual", "documentation", "howto", "tutorial", "example"]
+        }
+      },
+      "semantic_clustering": {
+        "enabled": true,
+        "max_clusters": 20,
+        "min_cluster_size": 3,
+        "similarity_threshold_clustering": 0.85,
+        "clustering_algorithm": "graph_based",
+        "performance_mode": "balanced"
+      },
+      "threshold_optimization": {
+        "enabled": true,
+        "auto_optimize": false,
+        "optimization_interval_hours": 168,
+        "min_data_points": 100,
+        "effectiveness_weight": 0.7,
+        "performance_weight": 0.3,
+        "learning_rate": 0.01
+      },
+      "performance_tracking": {
+        "enabled": true,
+        "track_effectiveness": true,
+        "track_performance_impact": true,
+        "retention_days": 30
+      }
     }
+  },
+  "analytics": {
+    "_comment": "Phase 3: Comprehensive analytics and intelligence system configuration",
+    "enabled": true,
+    "predictive_analytics": {
+      "enabled": true,
+      "prediction_horizon_days": 7,
+      "min_historical_data_days": 30,
+      "confidence_threshold": 0.7
+    },
+    "intelligence_system": {
+      "enabled": true,
+      "analysis_depth": "comprehensive",
+      "roi_scoring_enabled": true,
+      "optimization_recommendations": true,
+      "trend_analysis_enabled": true
+    },
+    "caching": {
+      "enabled": true,
+      "cache_duration_minutes": 15,
+      "max_cache_size": 100
+    },
+    "performance_monitoring": {
+      "track_generation_time": true,
+      "track_resource_usage": true,
+      "alert_on_slow_analytics": true,
+      "slow_threshold_seconds": 5.0
+    }
+  },
+  "chunk_relationships": {
+    "_comment": "Phase 3: Chunk relationship management configuration", 
+    "enabled": true,
+    "context_window_size": 2,
+    "track_deduplication_history": true,
+    "preserve_document_structure": true,
+    "relationship_cache_size": 1000,
+    "enable_cross_document_relationships": true
   },
   "logging": {
     "level": "INFO",

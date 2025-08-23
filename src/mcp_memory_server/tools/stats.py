@@ -44,9 +44,10 @@ def get_memory_stats_tool(memory_system) -> dict:
         # Add enhanced system metrics
         stats['enhanced_metrics'] = _calculate_enhanced_metrics(stats)
         
+        # Return MCP-compliant format
         return {
-            "success": True,
-            "stats": stats
+            "total_documents": stats.get('enhanced_metrics', {}).get('total_documents', 0),
+            "collections": stats.get('collections', {})
         }
     except Exception as e:
         raise Exception(f"Failed to get memory stats: {str(e)}")

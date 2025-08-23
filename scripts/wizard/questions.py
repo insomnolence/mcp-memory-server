@@ -485,33 +485,6 @@ class QuestionFlow:
                 validation={"min": 0.1, "max": 1.0, "step": 0.1}
             ),
             
-            # 9. Consolidation Frequency (Advanced)
-            Question(
-                id="consolidation_frequency",
-                title="How often should memories be consolidated?",
-                description="Memory consolidation combines related memories to save space.",
-                question_type=QuestionType.CHOICE,
-                depends_on="advanced_settings",
-                depends_value=True,
-                options=[
-                    QuestionOption(
-                        key="frequent",
-                        display="Every 2 hours",
-                        help_text="More processing overhead, better organization"
-                    ),
-                    QuestionOption(
-                        key="standard",
-                        display="Every 6 hours",
-                        help_text="Good balance",
-                        recommended=True
-                    ),
-                    QuestionOption(
-                        key="infrequent",
-                        display="Once daily",
-                        help_text="Less processing, slower organization"
-                    )
-                ]
-            )
         ]
         
         return questions

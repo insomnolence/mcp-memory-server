@@ -16,21 +16,27 @@ def convert_to_mcp_format(tool_result: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         MCP-compliant response dict
     """
+    # For MCP compliance, return the tool result directly as structured data
+    # The MCP specification expects structured responses, not JSON strings
+    
     # Check if it's a success/error response
-    is_error = not tool_result.get('success', True)
+    is_success = tool_result.get('success', True)
     
-    # Format the content as JSON text
-    content_text = json.dumps(tool_result, indent=2)
-    
-    return {
-        "content": [
-            {
-                "type": "text",
-                "text": content_text
+    if is_success:
+        # For successful responses, return the result directly
+        # Remove internal 'success' flag as it's not part of MCP spec
+        result = tool_result.copy()
+        result.pop('success', None)
+        return result
+    else:
+        # For errors, return error structure
+        return {
+            "error": {
+                "code": -32000,
+                "message": tool_result.get('message', 'Tool execution failed'),
+                "data": tool_result
             }
-        ],
-        "isError": is_error
-    }
+        }
 
 
 async def list_resources_handler() -> List[dict]:
@@ -132,7 +138,12 @@ async def handle_tools_call(rpc_id: int, params: dict, tool_registry: Dict[str, 
         )
         return JSONResponse(content=error_response.dict(), status_code=400)
     
-    result = tool_func(**tool_args)
+    # Handle both sync and async tool functions
+    import asyncio
+    if asyncio.iscoroutinefunction(tool_func):
+        result = await tool_func(**tool_args)
+    else:
+        result = tool_func(**tool_args)
     
     # Convert custom tool response to MCP-compliant format
     mcp_result = convert_to_mcp_format(result)

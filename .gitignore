@@ -56,6 +56,9 @@ data/memory/*
 *.sqlite3
 *.db
 
+# Runtime database directories
+chroma_db_advanced/
+
 # Temporary files
 *.tmp
 *.temp
@@ -65,6 +68,12 @@ data/memory/*
 .coverage
 .pytest_cache/
 htmlcov/
+tests/temp_test_db/
+tests/temp_logs/
+tests/**/*.sqlite3
+tests/**/*.db
+tests/chroma_*
+tests/data/
 
 # MyPy
 .mypy_cache/
@@ -77,9 +86,10 @@ dmypy.json
 .gemini/
 claude-code-settings.json
 
-# Ignore all markdown files in root except README.md
+# Ignore all markdown files in root except README.md and REPORT.md
 /*.md
 !README.md
+!REPORT.md
 
 # Configuration files
 config.json

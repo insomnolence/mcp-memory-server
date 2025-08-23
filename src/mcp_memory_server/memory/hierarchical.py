@@ -2,6 +2,7 @@ import time
 import json
 import random
 import logging
+import asyncio
 from typing import List, Dict, Any, Optional
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
@@ -10,7 +11,9 @@ from langchain_core.documents import Document
 
 from .scorer import MemoryImportanceScorer
 from .query_monitor import QueryPerformanceMonitor
+from .chunk_relationships import ChunkRelationshipManager
 from ..deduplication import MemoryDeduplicator
+from ..analytics import MemoryIntelligenceSystem
 
 
 class HierarchicalMemorySystem:
@@ -35,6 +38,9 @@ class HierarchicalMemorySystem:
         self.chunk_size = embeddings_config.get('chunk_size', 1000)
         self.chunk_overlap = embeddings_config.get('chunk_overlap', 100)
         
+        # Lifecycle manager (set after initialization)
+        self.lifecycle_manager = None
+        
         # Initialize memory collections with error handling
         try:
             self.short_term_memory = Chroma(
@@ -57,20 +63,26 @@ class HierarchicalMemorySystem:
         
         self.importance_scorer = MemoryImportanceScorer(scoring_config)
         
-        # Initialize deduplication system
+        # Initialize chunk relationship manager first (needed by deduplicator)
+        self.chunk_manager = ChunkRelationshipManager(self, memory_config.get('chunk_relationships', {}))
+        
+        # Initialize deduplication system with chunk manager
         if deduplication_config is None:
             deduplication_config = {'enabled': False}
-        self.deduplicator = MemoryDeduplicator(deduplication_config)
+        self.deduplicator = MemoryDeduplicator(deduplication_config, self.chunk_manager)
         
         # Initialize query performance monitor
         self.query_monitor = QueryPerformanceMonitor(memory_config.get('query_monitoring', {}))
         
+        # Initialize analytics and intelligence system
+        self.intelligence_system = MemoryIntelligenceSystem(self, memory_config.get('analytics', {}))
+        
         # Maintenance settings from config
         self.short_term_max_size = memory_config.get('short_term_max_size', 100)
-        self.consolidation_threshold = memory_config.get('consolidation_threshold', 50)
-        self.importance_threshold = scoring_config.get('importance_threshold', 0.7)
+        self.short_term_threshold = memory_config.get('short_term_threshold', 0.7)
+        self.long_term_threshold = memory_config.get('long_term_threshold', 0.95)
     
-    def add_memory(self, content: str, metadata: dict = None, context: dict = None, memory_type: str = "auto") -> dict:
+    async def add_memory(self, content: str, metadata: dict = None, context: dict = None, memory_type: str = "auto") -> dict:
         """Add memory to appropriate collection based on importance.
         
         Args:
@@ -91,7 +103,7 @@ class HierarchicalMemorySystem:
         # Check for duplicates during ingestion if deduplication is enabled
         if self.deduplicator.enabled:
             # First determine target collection to check against
-            temp_collection = (self.long_term_memory if importance > self.importance_threshold 
+            temp_collection = (self.long_term_memory if importance > self.short_term_threshold 
                              else self.short_term_memory)
             
             action, existing_doc, similarity = self.deduplicator.check_ingestion_duplicates(
@@ -117,10 +129,14 @@ class HierarchicalMemorySystem:
         
         # Determine target collection
         if memory_type == "auto":
-            if importance > self.importance_threshold:
+            if importance >= self.long_term_threshold:
                 target_collection = self.long_term_memory
                 collection_name = "long_term"
+            elif importance >= self.short_term_threshold:
+                target_collection = self.short_term_memory
+                collection_name = "short_term"
             else:
+                # Default to short_term if below short_term_threshold
                 target_collection = self.short_term_memory
                 collection_name = "short_term"
         elif memory_type == "long_term":
@@ -141,6 +157,10 @@ class HierarchicalMemorySystem:
             'context': json.dumps(context) if context else '{}'
         })
         
+        # Apply TTL and lifecycle metadata if lifecycle manager is available
+        if self.lifecycle_manager:
+            enhanced_metadata = self.lifecycle_manager.process_document_lifecycle(content, enhanced_metadata, importance)
+        
         # Generate unique ID
         memory_id = f"{collection_name}_{int(time.time() * 1000)}_{random.randint(1000, 9999)}"
         
@@ -148,19 +168,21 @@ class HierarchicalMemorySystem:
         language = metadata.get('language', 'text')
         chunks = self._chunk_content(content, language)
         
-        documents = []
-        for i, chunk in enumerate(chunks):
-            chunk_metadata = enhanced_metadata.copy()
-            chunk_metadata.update({
-                'chunk_index': i,
-                'total_chunks': len(chunks),
-                'chunk_id': f"{memory_id}_chunk_{i}"
-            })
-            documents.append(Document(page_content=chunk, metadata=chunk_metadata))
+        # Filter complex metadata before creating documents
+        filtered_metadata = self._filter_complex_metadata(enhanced_metadata)
+        
+        # Create documents with enhanced relationship tracking
+        documents = self.chunk_manager.create_document_with_relationships(
+            content=content,
+            metadata=filtered_metadata,
+            chunks=chunks,
+            memory_id=memory_id,
+            collection_name=collection_name
+        )
         
         # Add to collection with error handling
         try:
-            target_collection.add_documents(documents)
+            await asyncio.to_thread(target_collection.add_documents, documents)
             
             # Trigger maintenance if needed
             if collection_name == "short_term":
@@ -175,7 +197,8 @@ class HierarchicalMemorySystem:
                 "memory_id": memory_id,
                 "importance_score": importance,
                 "collection": collection_name,
-                "chunks_added": len(documents)
+                "chunks_added": len(documents),
+                "action": "added"
             }
             
         except Exception as db_error:
@@ -257,17 +280,46 @@ class HierarchicalMemorySystem:
         # Update access statistics for retrieved memories
         self._update_access_stats(top_results)
         
-        # Format for MCP response with enhanced metadata
+        # Format for MCP response with enhanced metadata and related chunks
         content_blocks = []
+        related_chunks_included = 0
+        
         for result in top_results:
             # Add deduplication information if available
             dedup_info = ""
             if result['metadata'].get('duplicate_sources'):
                 dedup_info = f" | Merged from {len(result['metadata']['duplicate_sources'])} sources"
             
+            # Get related chunks for better context
+            related_chunks = []
+            chunk_id = result['metadata'].get('chunk_id')
+            if chunk_id and hasattr(self, 'chunk_manager'):
+                try:
+                    related_chunks = self.chunk_manager.retrieve_related_chunks(chunk_id, k_related=2)
+                    if related_chunks:
+                        related_chunks_included += len(related_chunks)
+                except Exception as e:
+                    logging.warning(f"Failed to retrieve related chunks for {chunk_id}: {e}")
+            
+            # Format main result
+            result_text = f"**Score: {result['retrieval_score']:.3f} | Collection: {result['collection']}{dedup_info}**\n\n{result['document']}\n\n"
+            
+            # Add related chunks context if available
+            if related_chunks:
+                result_text += "**Related Context:**\n"
+                for i, related in enumerate(related_chunks[:2]):  # Limit to 2 most relevant
+                    relation_type = related.get('relationship_type', 'related')
+                    relevance = related.get('context_relevance', 0.0)
+                    
+                    result_text += f"*{relation_type.replace('_', ' ').title()} (relevance: {relevance:.2f}):*\n"
+                    result_text += f"{related.get('content_preview', 'No preview available')}\n\n"
+            
+            result_text += f"**Metadata:** {result['metadata']}"
+            
             content_blocks.append({
-                "type": "text",
-                "text": f"**Score: {result['retrieval_score']:.3f} | Collection: {result['collection']}{dedup_info}**\n\n{result['document']}\n\n**Metadata:** {result['metadata']}"
+                "type": "text", 
+                "text": result_text,
+                "metadata": result['metadata']  # Include metadata as separate field for MCP compatibility
             })
         
         # Calculate processing time and create results
@@ -279,7 +331,9 @@ class HierarchicalMemorySystem:
             "collections_searched": collections,
             "smart_routing_used": use_smart_routing and collections != ["short_term", "long_term"],
             "query_optimization_applied": use_smart_routing,
-            "processing_time_ms": processing_time * 1000
+            "processing_time_ms": processing_time * 1000,
+            "related_chunks_included": related_chunks_included,
+            "context_enhancement_enabled": hasattr(self, 'chunk_manager')
         }
         
         # Track query performance
@@ -431,6 +485,27 @@ class HierarchicalMemorySystem:
         
         return splitter.split_text(content)
     
+    def _filter_complex_metadata(self, metadata: dict) -> dict:
+        """Filter out complex metadata values that ChromaDB cannot handle.
+        
+        ChromaDB only accepts scalar values: str, int, float, bool, None
+        """
+        filtered = {}
+        for key, value in metadata.items():
+            if isinstance(value, (str, int, float, bool)) or value is None:
+                filtered[key] = value
+            elif isinstance(value, (list, dict)):
+                # Convert complex types to JSON strings
+                try:
+                    filtered[key] = json.dumps(value)
+                except (TypeError, ValueError):
+                    # If JSON serialization fails, convert to string representation
+                    filtered[key] = str(value)
+            else:
+                # Convert other types to strings
+                filtered[key] = str(value)
+        return filtered
+
     def _maintain_short_term_memory(self):
         """Enhanced memory maintenance with deduplication-aware cleanup."""
         try:
@@ -735,3 +810,39 @@ class HierarchicalMemorySystem:
         except Exception as e:
             logging.warning(f"Failed to get query performance stats: {e}")
             return {'error': str(e), 'message': 'Query monitoring not available'}
+    
+    def get_comprehensive_analytics(self) -> Dict[str, Any]:
+        """Get comprehensive system analytics with intelligence insights.
+        
+        Returns:
+            Comprehensive analytics including predictions and recommendations
+        """
+        try:
+            return self.intelligence_system.generate_comprehensive_analytics()
+        except Exception as e:
+            logging.warning(f"Failed to get comprehensive analytics: {e}")
+            return {'error': str(e), 'message': 'Analytics system not available'}
+    
+    def get_chunk_relationship_stats(self) -> Dict[str, Any]:
+        """Get chunk relationship statistics.
+        
+        Returns:
+            Chunk relationship statistics and health metrics
+        """
+        try:
+            if hasattr(self, 'chunk_manager'):
+                return self.chunk_manager.get_relationship_statistics()
+            else:
+                return {'error': 'Chunk relationship manager not available'}
+        except Exception as e:
+            logging.warning(f"Failed to get chunk relationship stats: {e}")
+            return {'error': str(e), 'message': 'Chunk relationship tracking not available'}
+    
+    def set_lifecycle_manager(self, lifecycle_manager):
+        """Set the lifecycle manager for TTL and aging functionality.
+        
+        Args:
+            lifecycle_manager: LifecycleManager instance
+        """
+        self.lifecycle_manager = lifecycle_manager
+        logging.info("Lifecycle manager integrated with hierarchical memory system")

@@ -15,9 +15,14 @@ from langchain_core.documents import Document
 class DocumentMerger:
     """Handles merging of duplicate documents with metadata preservation."""
     
-    def __init__(self):
-        """Initialize document merger."""
+    def __init__(self, chunk_manager=None):
+        """Initialize document merger.
+        
+        Args:
+            chunk_manager: ChunkRelationshipManager instance for handling relationships
+        """
         self.merge_history = []
+        self.chunk_manager = chunk_manager
         
     def choose_best_document(self, doc1: Dict[str, Any], doc2: Dict[str, Any]) -> Dict[str, Any]:
         """Choose the best document to keep when merging duplicates.
@@ -300,3 +305,98 @@ class DocumentMerger:
             logging.info(f"Merge history exported to {filepath}")
         except Exception as e:
             logging.error(f"Failed to export merge history: {e}")
+    
+    def merge_documents_with_relationships(self, primary_doc: Dict[str, Any], 
+                                         duplicate_docs: List[Dict[str, Any]], 
+                                         similarity_scores: List[float]) -> Dict[str, Any]:
+        """Merge documents while preserving chunk relationships.
+        
+        Args:
+            primary_doc: Primary document to keep
+            duplicate_docs: List of duplicate documents to merge
+            similarity_scores: Similarity scores for each duplicate
+            
+        Returns:
+            Merge summary with relationship information
+        """
+        current_time = time.time()
+        
+        # Extract document IDs for relationship tracking
+        primary_doc_id = self._extract_document_id(primary_doc)
+        duplicate_doc_ids = [self._extract_document_id(doc) for doc in duplicate_docs]
+        
+        # Handle chunk relationships if chunk manager is available
+        relationship_summary = {}
+        if self.chunk_manager:
+            try:
+                relationship_summary = self.chunk_manager.handle_deduplication_merge(
+                    primary_doc_id=primary_doc_id,
+                    merged_doc_ids=duplicate_doc_ids,
+                    similarity_scores=similarity_scores
+                )
+            except Exception as e:
+                logging.warning(f"Failed to handle chunk relationships during merge: {e}")
+                relationship_summary = {'error': str(e)}
+        
+        # Perform traditional metadata merging
+        merged_metadata = primary_doc.get('metadata', {}).copy()
+        
+        # Aggregate statistics from all duplicates
+        total_access_count = merged_metadata.get('access_count', 0)
+        max_importance = merged_metadata.get('importance_score', 0.0)
+        earliest_timestamp = merged_metadata.get('timestamp', current_time)
+        latest_access = merged_metadata.get('last_accessed', current_time)
+        
+        for i, duplicate_doc in enumerate(duplicate_docs):
+            dup_metadata = duplicate_doc.get('metadata', {})
+            
+            total_access_count += dup_metadata.get('access_count', 0)
+            max_importance = max(max_importance, dup_metadata.get('importance_score', 0.0))
+            earliest_timestamp = min(earliest_timestamp, dup_metadata.get('timestamp', current_time))
+            latest_access = max(latest_access, dup_metadata.get('last_accessed', current_time))
+        
+        # Update merged metadata with aggregated values
+        merged_metadata.update({
+            'access_count': total_access_count,
+            'importance_score': max_importance,
+            'first_seen': earliest_timestamp,
+            'last_accessed': latest_access,
+            'duplicate_sources': [primary_doc_id] + duplicate_doc_ids,
+            'merge_timestamp': current_time,
+            'merged_from_count': len(duplicate_docs) + 1,
+            'average_similarity': sum(similarity_scores) / len(similarity_scores) if similarity_scores else 0.0,
+            'deduplication_version': '2.0',
+            'chunk_relationships_preserved': relationship_summary.get('relationships_preserved', 0)
+        })
+        
+        # Record comprehensive merge history
+        comprehensive_merge_record = {
+            'timestamp': current_time,
+            'primary_document_id': primary_doc_id,
+            'merged_document_ids': duplicate_doc_ids,
+            'similarity_scores': dict(zip(duplicate_doc_ids, similarity_scores)),
+            'documents_merged': len(duplicate_docs),
+            'chunk_relationships': relationship_summary,
+            'merge_reason': 'batch_deduplication_with_relationships'
+        }
+        self.merge_history.append(comprehensive_merge_record)
+        
+        return {
+            'success': True,
+            'primary_document_id': primary_doc_id,
+            'merged_count': len(duplicate_docs),
+            'merged_metadata': merged_metadata,
+            'relationship_summary': relationship_summary,
+            'processing_time': time.time() - current_time
+        }
+    
+    def _extract_document_id(self, doc: Dict[str, Any]) -> str:
+        """Extract document ID from document dictionary."""
+        # Try multiple possible locations for document ID
+        doc_id = (
+            doc.get('id') or 
+            doc.get('metadata', {}).get('document_id') or 
+            doc.get('metadata', {}).get('chunk_id', '').split('_chunk_')[0] or
+            f"unknown_{int(time.time() * 1000)}"
+        )
+        return doc_id

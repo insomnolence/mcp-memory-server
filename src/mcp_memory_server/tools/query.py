@@ -30,7 +30,51 @@ def query_documents_tool(memory_system, query: str, collections: str = None, k: 
         if use_reranker and len(result["content"]) > 1:
             result = apply_reranking(query, result, reranker_model)
         
-        return result
+        # Transform to MCP-compliant format
+        mcp_result = {
+            "results": []
+        }
+        
+        for content_block in result.get("content", []):
+            # Extract content from the formatted text blocks
+            text = content_block.get("text", "")
+            
+            # Extract the actual content (skip score and metadata)
+            content_lines = text.split('\n')
+            actual_content = ""
+            in_content = False
+            
+            for line in content_lines:
+                if line.startswith('**Score:'):
+                    continue
+                elif line.startswith('**Related Context:**'):
+                    break  # Stop at related context for now
+                elif line.startswith('**Metadata:**'):
+                    break  # Stop at metadata
+                elif line.strip() == "":
+                    if in_content:
+                        actual_content += "\n"
+                else:
+                    in_content = True
+                    if actual_content:
+                        actual_content += "\n"
+                    actual_content += line
+            
+            if actual_content.strip():
+                mcp_result["results"].append({
+                    "content": actual_content.strip(),
+                    "metadata": content_block.get("metadata", {})
+                })
+        
+        # Add additional metadata from the original result
+        mcp_result.update({
+            "total_results": result.get("total_results", len(mcp_result["results"])),
+            "collections_searched": result.get("collections_searched", []),
+            "processing_time_ms": result.get("processing_time_ms", 0),
+            "smart_routing_used": result.get("smart_routing_used", False)
+        })
+        
+        return mcp_result
     except Exception as e:
         raise Exception(f"Failed to query documents: {str(e)}")
 

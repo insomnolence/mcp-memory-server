@@ -88,7 +88,7 @@ def create_config_from_template(template_name: str, output_file: str = "config.j
         
         # Show next steps
         print("\nNext steps:")
-        print(f"1. Review config: python scripts/setup_wizard.py --analyze --config-file {output_file}")
+        print(f"1. Validate config: python scripts/validate_config.py {output_file}")
         print(f"2. Start server: python scripts/start_server.py")
         print(f"3. Test setup with client examples in client-examples/")
         

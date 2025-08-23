@@ -1,0 +1,221 @@
+{
+  "_comment": "Testing configuration - optimized for fast tests with clean state",
+  "database": {
+    "persist_directory": "./tests/temp_test_db",
+    "collections": {
+      "short_term": "test_short_term",
+      "long_term": "test_long_term"
+    }
+  },
+  "embeddings": {
+    "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    "chunk_size": 500,
+    "chunk_overlap": 50
+  },
+  "reranker": {
+    "model_name": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+  },
+  "memory_scoring": {
+    "decay_constant": 3600,
+    "max_access_count": 50,
+    "importance_threshold": 0.6,
+    "scoring_weights": {
+      "semantic": 0.4,
+      "recency": 0.3,
+      "frequency": 0.2,
+      "importance": 0.1
+    },
+    "base_scoring": {
+      "length_normalization": 500,
+      "max_length_score": 1.0
+    },
+    "domain_patterns": {
+      "case_sensitive": false,
+      "patterns": {
+        "high_value_content": {
+          "keywords": ["important", "critical", "test", "verify"],
+          "bonus": 0.3,
+          "match_mode": "any"
+        },
+        "technical_content": {
+          "keywords": ["function", "error", "implementation"],
+          "bonus": 0.2,
+          "match_mode": "any"
+        }
+      },
+      "permanence_triggers": {
+        "critical_information": {
+          "keywords": ["critical", "permanent", "must remember"],
+          "boost": 0.25
+        }
+      }
+    }
+  },
+  "memory_management": {
+    "short_term_max_size": 50,
+    "short_term_threshold": 0.4,
+    "long_term_threshold": 0.7,
+    "maintenance_interval_hours": 0.1,
+    "stats_interval_hours": 6,
+    "query_monitoring": {
+      "history_size": 100,
+      "track_user_satisfaction": true,
+      "enable_real_time_metrics": true,
+      "aggregation_intervals": {
+        "hourly": 3600,
+        "daily": 86400
+      },
+      "performance_thresholds": {
+        "fast_query_ms": 100,
+        "slow_query_ms": 1000,
+        "good_result_quality": 0.8
+      }
+    }
+  },
+  "lifecycle": {
+    "ttl": {
+      "_comment": "Faster TTL for testing (30s, 5min, 1hr, 6hr)",
+      "high_frequency_base": 30,
+      "high_frequency_jitter": 5,
+      "medium_frequency_base": 300,
+      "medium_frequency_jitter": 30,
+      "low_frequency_base": 3600,
+      "low_frequency_jitter": 300,
+      "static_base": 21600,
+      "static_jitter": 1800
+    },
+    "aging": {
+      "enabled": true,
+      "decay_rate": 0.2,
+      "minimum_score": 0.1,
+      "refresh_threshold_days": 1.0
+    },
+    "maintenance": {
+      "enabled": true,
+      "cleanup_interval_hours": 0.01,
+      "consolidation_interval_hours": 0.1,
+      "statistics_interval_hours": 1,
+      "deep_maintenance_interval_hours": 6
+    },
+    "progressive_cleanup": {
+      "daily": {
+        "interval_hours": 1,
+        "max_processing_time_seconds": 5,
+        "duplicate_threshold": 0.95,
+        "enabled": true
+      },
+      "weekly": {
+        "interval_hours": 6,
+        "max_processing_time_seconds": 30,
+        "similarity_threshold": 0.75,
+        "enabled": true
+      },
+      "monthly": {
+        "interval_hours": 24,
+        "max_processing_time_seconds": 120,
+        "deep_analysis_enabled": true,
+        "enabled": true
+      }
+    }
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "title": "MCP Memory Server - Test Mode",
+    "version": "2.0.0-test",
+    "protocol_version": "2025-06-18"
+  },
+  "deduplication": {
+    "_comment": "ENABLED for testing deduplication functionality",
+    "enabled": true,
+    "similarity_threshold": 0.90,
+    "min_importance_diff": 0.05,
+    "preserve_high_access": true,
+    "collections": ["short_term", "long_term"],
+    "batch_processing": {
+      "enabled": true,
+      "interval_hours": 0.1,
+      "max_documents_per_batch": 100
+    },
+    "ingestion_checking": {
+      "enabled": true,
+      "quick_threshold": 0.90
+    },
+    "advanced_features": {
+      "domain_awareness": {
+        "enabled": true,
+        "domain_thresholds": {
+          "code": 0.95,
+          "text": 0.85,
+          "data": 0.90,
+          "documentation": 0.80
+        },
+        "classification_keywords": {
+          "code": ["function", "def", "class", "import", "return"],
+          "text": ["the", "and", "or", "but", "however"],
+          "data": ["data", "json", "csv", "table"],
+          "documentation": ["readme", "guide", "manual", "documentation"]
+        }
+      },
+      "semantic_clustering": {
+        "enabled": true,
+        "max_clusters": 10,
+        "min_cluster_size": 2,
+        "similarity_threshold_clustering": 0.80,
+        "clustering_algorithm": "graph_based",
+        "performance_mode": "balanced"
+      },
+      "enable_auto_optimization": true,
+      "threshold_optimization": {
+        "enabled": true,
+        "auto_optimize": true
+      },
+      "performance_tracking": {
+        "enabled": true,
+        "track_effectiveness": true,
+        "track_performance_impact": true,
+        "retention_days": 7
+      }
+    }
+  },
+  "analytics": {
+    "enabled": true,
+    "predictive_analytics": {
+      "enabled": false,
+      "prediction_horizon_days": 1,
+      "min_historical_data_days": 1,
+      "confidence_threshold": 0.6
+    },
+    "intelligence_system": {
+      "enabled": true,
+      "analysis_depth": "basic",
+      "roi_scoring_enabled": true,
+      "optimization_recommendations": true,
+      "trend_analysis_enabled": false
+    },
+    "caching": {
+      "enabled": true,
+      "cache_duration_minutes": 5,
+      "max_cache_size": 20
+    },
+    "performance_monitoring": {
+      "track_generation_time": true,
+      "track_resource_usage": false,
+      "alert_on_slow_analytics": false,
+      "slow_threshold_seconds": 2.0
+    }
+  },
+  "chunk_relationships": {
+    "enabled": true,
+    "context_window_size": 2,
+    "track_deduplication_history": true,
+    "preserve_document_structure": true,
+    "relationship_cache_size": 100,
+    "enable_cross_document_relationships": true
+  },
+  "logging": {
+    "level": "WARNING",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file": "tests/temp_logs/test_server.log"
+  }
+}

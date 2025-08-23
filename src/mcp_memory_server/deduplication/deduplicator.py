@@ -12,16 +12,18 @@ from langchain_core.documents import Document
 
 from .similarity import SimilarityCalculator
 from .merger import DocumentMerger
+from .advanced_features import AdvancedDeduplicationFeatures
 
 
 class MemoryDeduplicator:
     """Main deduplication system for the hierarchical memory system."""
     
-    def __init__(self, deduplication_config: dict):
+    def __init__(self, deduplication_config: dict, chunk_manager=None):
         """Initialize deduplication system.
         
         Args:
             deduplication_config: Configuration dict for deduplication settings
+            chunk_manager: ChunkRelationshipManager instance for handling relationships
         """
         self.config = deduplication_config
         self.enabled = deduplication_config.get('enabled', True)
@@ -32,7 +34,9 @@ class MemoryDeduplicator:
         
         # Initialize components
         self.similarity_calculator = SimilarityCalculator(self.similarity_threshold)
-        self.document_merger = DocumentMerger()
+        self.document_merger = DocumentMerger(chunk_manager)
+        self.chunk_manager = chunk_manager
+        self.advanced_features = AdvancedDeduplicationFeatures(self, deduplication_config.get('advanced_features', {}))
         
         # Statistics tracking
         self.stats = {
@@ -90,10 +94,17 @@ class MemoryDeduplicator:
                         'id': candidate_metadata.get('chunk_id', 'unknown')
                     }
             
-            # Determine action based on similarity
-            if best_similarity > 0.95:
+            # Apply domain-aware thresholds
+            adjusted_thresholds = self.advanced_features.apply_domain_aware_thresholds(
+                [{'page_content': new_content, 'metadata': new_metadata}], 
+                self.similarity_threshold
+            )
+            domain_threshold, _ = adjusted_thresholds[0] if adjusted_thresholds else (self.similarity_threshold, 'default')
+            
+            # Determine action based on similarity with domain awareness
+            if best_similarity > domain_threshold:
                 return 'boost_existing', best_candidate, best_similarity
-            elif best_similarity > 0.85:
+            elif best_similarity > domain_threshold * 0.85:  # 85% of domain threshold
                 return 'merge_content', best_candidate, best_similarity
             else:
                 return 'add_new', None, best_similarity
@@ -174,10 +185,11 @@ class MemoryDeduplicator:
                 }
                 doc_dicts.append(doc_dict)
             
-            # Find duplicates using existing proposal algorithm
-            # Note: This is limited without direct embedding access
-            # In full implementation, would extract embeddings from ChromaDB
-            duplicate_pairs = self._find_duplicates_simple(doc_dicts)
+            # Apply semantic clustering if enabled
+            clustered_docs = self.advanced_features.apply_semantic_clustering(doc_dicts)
+            
+            # Find duplicates using advanced features with domain awareness
+            duplicate_pairs = self._find_duplicates_advanced(doc_dicts, clustered_docs)
             
             if not duplicate_pairs:
                 processing_time = time.time() - start_time
@@ -252,6 +264,69 @@ class MemoryDeduplicator:
         
         return duplicates
     
+    def _find_duplicates_advanced(self, documents: List[Dict[str, Any]], 
+                                 clustered_docs: Dict[str, Any]) -> List[Tuple[Dict, Dict, float]]:
+        """Advanced duplicate detection with domain awareness and semantic clustering.
+        
+        Args:
+            documents: List of document dictionaries
+            clustered_docs: Results from semantic clustering
+            
+        Returns:
+            List of duplicate pairs with similarity scores
+        """
+        duplicates = []
+        
+        # Apply domain-aware thresholds
+        domain_thresholds = self.advanced_features.apply_domain_aware_thresholds(
+            documents, self.similarity_threshold
+        )
+        
+        # Create threshold lookup
+        threshold_lookup = {
+            doc['id']: threshold for (threshold, reason), doc 
+            in zip(domain_thresholds, documents)
+        }
+        
+        # Check within clusters first (more efficient)
+        if clustered_docs.get('clusters'):
+            for cluster_id, cluster_docs in clustered_docs['clusters'].items():
+                cluster_doc_ids = set(cluster_docs)
+                
+                # Find duplicates within the cluster
+                for i, doc1 in enumerate(documents):
+                    if doc1['id'] not in cluster_doc_ids:
+                        continue
+                        
+                    for j, doc2 in enumerate(documents[i + 1:], i + 1):
+                        if doc2['id'] not in cluster_doc_ids:
+                            continue
+                        
+                        # Calculate similarity
+                        similarity = self._simple_content_similarity(
+                            doc1['page_content'], doc2['page_content']
+                        )
+                        
+                        # Use the lower of the two domain thresholds
+                        threshold1 = threshold_lookup.get(doc1['id'], self.similarity_threshold)
+                        threshold2 = threshold_lookup.get(doc2['id'], self.similarity_threshold)
+                        effective_threshold = min(threshold1, threshold2)
+                        
+                        if similarity > effective_threshold:
+                            duplicates.append((doc1, doc2, similarity))
+        else:
+            # Fallback to simple method if clustering failed
+            duplicates = self._find_duplicates_simple(documents)
+        
+        # Track advanced features usage
+        self.advanced_features.track_effectiveness(
+            total_documents=len(documents),
+            duplicates_found=len(duplicates),
+            clusters_formed=len(clustered_docs.get('clusters', {}))
+        )
+        
+        return duplicates
+    
     def _update_stats(self, duplicate_pairs: List[Tuple], merged_docs: List[Dict]):
         """Update deduplication statistics.
         
@@ -279,6 +354,8 @@ class MemoryDeduplicator:
             'similarity_threshold': self.similarity_threshold,
             'target_collections': self.target_collections,
             'merger_stats': self.document_merger.get_merge_statistics(),
+            'advanced_features_stats': self.advanced_features.get_performance_analytics(),
+            'domain_thresholds': self.advanced_features.domain_thresholds,
             'last_check': time.time()
         })
         
@@ -329,3 +406,59 @@ class MemoryDeduplicator:
         logging.info(f"Boosted existing document importance from {current_importance:.3f} to {boosted_importance:.3f}")
         
         return updated_metadata
+    
+    def optimize_thresholds(self) -> Dict[str, Any]:
+        """Optimize deduplication thresholds using advanced features.
+        
+        Returns:
+            Dictionary with optimization results
+        """
+        return self.advanced_features.optimize_thresholds_automatically()
+    
+    def get_domain_analysis(self, documents: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze documents by domain for threshold recommendations.
+        
+        Args:
+            documents: List of document dictionaries
+            
+        Returns:
+            Dictionary with domain analysis results
+        """
+        # Apply domain classification
+        domain_thresholds = self.advanced_features.apply_domain_aware_thresholds(
+            documents, self.similarity_threshold
+        )
+        
+        # Analyze domain distribution
+        domain_counts = {}
+        for (threshold, reason), doc in zip(domain_thresholds, documents):
+            domain = reason.replace('domain_', '') if reason.startswith('domain_') else reason
+            domain_counts[domain] = domain_counts.get(domain, 0) + 1
+        
+        return {
+            'domain_distribution': domain_counts,
+            'threshold_recommendations': {
+                domain: threshold for (threshold, reason) in set(domain_thresholds)
+                if reason.startswith('domain_')
+            },
+            'total_documents_analyzed': len(documents)
+        }
+    
+    def get_clustering_analysis(self, documents: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Perform semantic clustering analysis on documents.
+        
+        Args:
+            documents: List of document dictionaries
+            
+        Returns:
+            Dictionary with clustering analysis results
+        """
+        return self.advanced_features.apply_semantic_clustering(documents)
+    
+    def get_advanced_performance_metrics(self) -> Dict[str, Any]:
+        """Get comprehensive performance metrics from advanced features.
+        
+        Returns:
+            Dictionary with advanced performance analytics
+        """
+        return self.advanced_features.get_performance_analytics()

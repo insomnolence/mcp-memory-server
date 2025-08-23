@@ -1,269 +1,186 @@
-> **Note:** This is a personal project that is ongoing.
->
+# MCP Memory Server
 
----
+A hierarchical memory management system for AI agents using the Model Context Protocol (MCP). Provides intelligent storage, retrieval, and lifecycle management of conversational context and knowledge across sessions.
 
-# Enhanced MCP Memory Server
+## Features
 
-A personal project exploring intelligent hierarchical memory management for AI systems through the Model Context Protocol (MCP). Features an interactive configuration wizard, domain-agnostic design, and experimental lifecycle management. Born out of need to have a kind of "memory" for AI agents I was using, this helps keep context and knowlege from session to session.
-
-## Key Features
-
-- **3-Tier Memory Architecture**: Short-term, long-term, and permanent memory collections
-- **Configuration Wizard**: Interactive setup wizard with template support and guided configuration
-- **Universal Domain Support**: Works with ANY domain - business, research, creative, technical, etc.
-- **Intelligent Importance Scoring**: Multi-factor algorithm combining semantic similarity, recency, frequency, and domain patterns
-- **Automatic Lifecycle Management**: TTL-based expiration with importance-weighted aging and jitter
-- **Permanence System**: Critical knowledge preservation with automatic and explicit permanence triggers
-- **Background Maintenance**: Automated cleanup and health monitoring
-- **FastAPI Implementation**: Modular architecture with MCP tools API
+- **Three-Tier Memory Architecture**: Short-term, long-term, and permanent memory collections
+- **Intelligent Document Scoring**: Multi-factor importance calculation based on content, recency, and access patterns
+- **Advanced Deduplication**: Semantic similarity detection with configurable thresholds and domain awareness
+- **Lifecycle Management**: Automated TTL-based cleanup with importance-weighted aging
+- **Query Performance Monitoring**: Real-time metrics and performance analytics
+- **Chunk Relationship Tracking**: Maintains relationships between document fragments
+- **FastAPI Integration**: RESTful API with comprehensive MCP tools
+- **Comprehensive Testing**: Full test suite with pytest integration
 
 ## Quick Start
 
 ### Prerequisites
 
 - Python 3.8+
-- pip (requirements.txt provided)
+- pip
 
 ### Installation
 
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd MCPServer
+cd mcp-memory-server
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the configuration wizard
-python3 scripts/config_wizard.py
+# Run configuration wizard
+python scripts/config_wizard.py
 
 # Start the server
-python3 scripts/start_server.py
+python scripts/start_server.py
 ```
 
-### 30-Second Setup (Templates)
+### Testing
 
 ```bash
-# Quick setup with pre-configured templates
-python3 scripts/config_wizard.py template
+# Run all tests
+pytest -v
 
-# Choose from:
-# 1. Development (recommended for coding projects)
-# 2. Research (extended retention, analysis-focused)  
-# 3. Creative (writing, brainstorming)
-# 4. Business (meetings, processes)
-# 5. Minimal (resource-constrained environments)
-# 6. Maximum (extensive retention)
+# Run specific test categories
+pytest tests/unit/ -v          # Unit tests only
+pytest tests/integration/ -v   # Integration tests only
 ```
 
-## Configuration Options
+## Configuration
 
-### Interactive Wizard
+### Interactive Setup
+The configuration wizard provides guided setup for common use cases:
+
 ```bash
-python3 scripts/config_wizard.py              # Full interactive setup
-python3 scripts/config_wizard.py --help       # Show usage options
-python3 scripts/config_wizard.py --non-interactive  # Automation-friendly
+python scripts/config_wizard.py           # Interactive setup
+python scripts/config_wizard.py template  # Template-based setup
 ```
-
-The wizard helps configure:
-- **Memory retention strategies** (hours to permanent)
-- **Server accessibility** (localhost, network, custom)
-- **Domain-specific keywords** (custom pattern recognition)
-- **Performance preferences** (accuracy vs speed)
-- **Storage allocation** (minimal to extensive)
-- **Advanced settings** (thresholds, intervals)
 
 ### Manual Configuration
-Edit `config.json` directly or use domain-specific configs in `config/domains/`:
-- `config.business-development.json` - Business operations
-- `config.research.json` - Research and analysis
-- `config.creative-writing.json` - Creative projects
-- `config.cooking.json` - Culinary domain
+Configuration files are stored in `config/`:
+- `config.example.json` - Complete configuration template
+- `config/domains/` - Domain-specific configurations
+
+## Architecture
+
+### Memory Tiers
+1. **Short-term Memory** - Recent interactions and temporary context
+2. **Long-term Memory** - Important information for extended retention
+3. **Permanent Memory** - Critical knowledge preserved indefinitely
+
+### Importance Scoring
+Documents are scored using multiple factors:
+- **Semantic Analysis** - Content relevance and meaning
+- **Recency Weighting** - Time-based importance decay
+- **Access Patterns** - Frequency of retrieval
+- **Domain Patterns** - Configurable keyword matching
+
+### Deduplication System
+- **Semantic Similarity Detection** - Prevents duplicate storage
+- **Content Merging** - Combines similar documents intelligently
+- **Domain-Aware Thresholds** - Different similarity requirements per content type
+- **Performance Tracking** - Monitors deduplication effectiveness
+
+## MCP Tools API
+
+### Document Management
+- `add_document` - Store content with automatic importance scoring
+- `query_documents` - Semantic search with reranking
+- `query_permanent_documents` - Search permanent content only
+
+### System Monitoring
+- `get_memory_stats` - Collection statistics and health metrics
+- `get_lifecycle_stats` - TTL and aging system status
+- `get_deduplication_stats` - Deduplication performance metrics
+- `get_query_performance` - Query latency and effectiveness
+- `get_real_time_metrics` - Live system performance data
+
+### Advanced Features
+- `deduplicate_memories` - Manual deduplication trigger
+- `cleanup_expired_memories` - Force cleanup of expired content
+- `get_chunk_relationships` - Analyze document relationships
+- `get_system_health_assessment` - Comprehensive system health
 
 ## Project Structure
 
 ```
-MCPServer/
-├── src/mcp_memory_server/      # Modular server implementation
-│   ├── config/                 # Configuration management
-│   ├── memory/                 # Hierarchical memory system
-│   │   ├── scorer.py          # Importance scoring algorithm
-│   │   ├── hierarchical.py    # 4-tier memory architecture
-│   │   └── lifecycle.py       # TTL and maintenance
-│   ├── server/                # FastAPI MCP server
-│   └── tools/                 # MCP tools implementation
-├── config/                    # Configuration files
-│   ├── domains/              # Domain-specific examples
-│   └── example.json          # Configuration template  
-├── scripts/                  # Management scripts
-│   ├── config_wizard.py     # Professional setup wizard
-│   ├── start_server.py      # Server startup
-│   └── validate_config.py   # Configuration validation
-├── data/memory/             # ChromaDB persistence (auto-created)
-├── logs/                    # Server logs (auto-created)
-├── client-examples/         # AI client configurations
-└── docs/                    # Comprehensive documentation
+mcp-memory-server/
+├── src/mcp_memory_server/      # Core server implementation
+│   ├── analytics/              # Intelligence and analytics
+│   ├── config/                 # Configuration management  
+│   ├── deduplication/          # Duplicate detection system
+│   ├── memory/                 # Hierarchical memory management
+│   ├── server/                 # FastAPI server and handlers
+│   └── tools/                  # MCP tools implementation
+├── tests/                      # Comprehensive test suite
+│   ├── unit/                   # Unit tests
+│   ├── integration/            # Integration tests  
+│   └── performance/            # Performance tests
+├── config/                     # Configuration files
+├── scripts/                    # Management utilities
+├── client-examples/            # Client integration examples
+└── docs/                       # Documentation
 ```
 
-## MCP Tools API
+## Testing Infrastructure
 
-The server exposes comprehensive MCP tools for memory management:
+The project includes a comprehensive testing framework:
 
-### Document Management
-- **`add_document_tool`** - Add content with automatic importance scoring and collection routing
-- **`query_documents_tool`** - Multi-collection semantic search with intelligent reranking
-- **`query_permanent_documents_tool`** - Search only critical/permanent content
-
-### System Monitoring  
-- **`get_memory_stats_tool`** - Collection statistics and system health metrics
-- **`get_lifecycle_stats_tool`** - TTL management and aging system status
-- **`get_permanence_stats_tool`** - Permanent content analytics
-
-### Lifecycle Management
-- **`start_background_maintenance_tool`** - Enable automated maintenance processes
-- **`stop_background_maintenance_tool`** - Disable background maintenance
-
-## Memory Architecture
-
-### Four-Tier System
-1. **Short-term Memory** - Recent interactions with auto-pruning (default: 100 items)
-2. **Long-term Memory** - Important persistent knowledge (importance ≥ 0.7)  
-3. **Permanent Memory** - Critical knowledge preserved indefinitely (importance ≥ 0.95)
-4. **Consolidated Memory** - Compressed summaries of related memories
-
-### Intelligent Scoring
-- **Semantic Analysis** (40%) - Content relevance and similarity
-- **Recency Weighting** (30%) - Time-based importance decay
-- **Frequency Analysis** (20%) - Access pattern recognition  
-- **Explicit Importance** (10%) - User-defined priority
-
-### Lifecycle Management
-- **TTL with Jitter** - Prevents mass expiration events
-- **Importance-based Aging** - Critical content ages slower
-- **Automatic Consolidation** - Related memories compressed into summaries
-- **Background Maintenance** - Continuous optimization without blocking operations
-
-## Domain Examples
-
-Configure for **any domain** with custom keywords - no code changes needed:
-
-### Business Intelligence
-```json
-{
-  "domain_patterns": {
-    "patterns": {
-      "business_metrics": {
-        "keywords": ["revenue", "KPI", "ROI", "conversion", "growth"],
-        "bonus": 0.35
-      }
-    }
-  }
-}
-```
-
-### Scientific Research  
-```json
-{
-  "domain_patterns": {
-    "patterns": {
-      "research_findings": {
-        "keywords": ["hypothesis", "methodology", "p-value", "correlation"],
-        "bonus": 0.4
-      }
-    }
-  }
-}
-```
-
-**Works for**: Software development, creative writing, cooking, astronomy, fitness, music, law, medicine, education, and more.
-
-## Upcoming Enhancements
-
-### Universal Embedding Providers (Next Release)
-Expanding beyond HuggingFace to support multiple embedding providers:
-- **OpenAI** (text-embedding-3-small/large) - High quality, API-based
-- **Azure OpenAI** - Enterprise integration with existing Azure infrastructure  
-- **Cohere** - Cost-effective alternative with good performance
-- **Ollama** - Local deployment for privacy-sensitive environments
-- **Migration System** - Seamless upgrades from current HuggingFace setup
-
-This enhancement will provide greater flexibility in deployment scenarios while maintaining backward compatibility.
-
-## Performance Characteristics
-
-- **Storage Efficiency**: Intelligent lifecycle management reduces memory footprint
-- **Query Speed**: Fast semantic search with reranking
-- **Memory Consolidation**: Automatic clustering to preserve knowledge while saving space
-- **Configuration Validation**: Built-in validation to catch configuration issues
-
-## Experimentation & Testing
-
-### Validation
-```bash
-# Validate configuration  
-python3 scripts/validate_config.py
-
-# Test server startup
-python3 scripts/start_server.py  # Ctrl+C to stop
-```
-
-### Configuration Management
-```bash
-# Reconfigure anytime
-python3 scripts/config_wizard.py
-
-# Check different templates
-python3 scripts/config_wizard.py template
-
-# Use environment variables for domains
-MCP_DOMAIN=research python3 scripts/start_server.py
-```
-
-## Documentation
-
-- **`docs/configuration.md`** - Complete configuration guide and manual setup
-- **`docs/configuration-wizard-enhanced.md`** - Configuration wizard features and usage
-- **`docs/architecture.md`** - System architecture and design overview  
-- **`docs/domain-configuration.md`** - Domain-specific pattern configuration
-- **`client-examples/`** - Ready-to-use configurations for Claude Code CLI and other clients
-- **`docs/README.md`** - Complete documentation index
+- **111 Tests Total**: Full coverage of functionality
+- **Unit Tests**: Component-level testing with mocking
+- **Integration Tests**: End-to-end functionality validation
+- **Performance Tests**: Memory usage and query performance
+- **Shared Test Database**: Efficient test execution with proper isolation
 
 ## Client Integration
 
-The server works with any MCP-compatible client. Example configurations provided for:
-- **Claude Code CLI** - Complete setup scripts included
-- **Gemini CLI** - Full integration examples
-- **Custom Clients** - Comprehensive MCP protocol implementation
+Compatible with any MCP client. Example configurations provided for:
+- **Claude Code CLI** - Development environment integration
+- **Gemini CLI** - Alternative client support
+- **Generic MCP Clients** - Standard protocol implementation
 
-## Advanced Usage
+Ready-to-use configuration files available in `client-examples/`.
 
-### Different Configurations
+## Performance Characteristics
+
+- **Memory Efficiency**: Intelligent lifecycle management prevents unbounded growth
+- **Query Performance**: Fast semantic search with optional reranking
+- **Scalable Architecture**: Modular design supports growth and customization
+- **Monitoring**: Built-in performance tracking and health assessment
+
+## Documentation
+
+- `docs/architecture.md` - System design and components
+- `docs/configuration.md` - Configuration guide and options
+- `docs/domain-configuration.md` - Domain-specific setup
+- `client-examples/README.md` - Client integration guide
+- `REPORT.md` - Technical analysis and improvement opportunities
+
+## Development
+
+### Running Tests
 ```bash
-# Default local development
-python3 scripts/start_server.py
+# All tests
+pytest -v
 
-# Use domain-specific configuration  
-MCP_DOMAIN=research python3 scripts/start_server.py
+# Specific test file
+pytest tests/integration/test_deduplication_flow.py -v
 
-# Custom configuration file
-python3 scripts/start_server.py --config custom-config.json
+# With coverage
+pytest --cov=src/mcp_memory_server tests/
 ```
 
-### Monitoring Features
-- **Configuration Backups** - Automatic backup when changing settings
-- **Structured Logging** - Logs saved to `logs/mcp_server.log`  
-- **Memory Statistics** - Built-in tools to monitor system usage
-- **Validation Tools** - Configuration checking and server health
+### Configuration Validation
+```bash
+# Validate configuration
+python scripts/validate_config.py
 
-## Future Enhancements
-
-### Planned Features
-- **Memory Consolidation** - Automatic summarization and compression of related memories
-- **Advanced Analytics** - Usage patterns and memory effectiveness metrics
-- **Multi-Provider Embeddings** - Support for OpenAI, Azure, Cohere embedding models
-- **Enhanced Monitoring** - Comprehensive dashboards and alerts
+# Test server startup
+python scripts/start_server.py --test
+```
 
 ---
 
-*This is a personal experimental project exploring MCP memory systems. The configuration wizard transforms technical parameters into user-friendly questions, making it easier to experiment with different memory strategies.*
+*This project explores intelligent memory management for AI systems through the Model Context Protocol, focusing on practical session persistence and knowledge retention.*

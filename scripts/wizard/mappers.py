@@ -47,7 +47,6 @@ class ConfigMapper:
                 "collections": {
                     "short_term": "short_term_memory",
                     "long_term": "long_term_memory",
-                    "consolidated": "consolidated_memory",
                     "legacy": "knowledge_base"
                 }
             },
@@ -116,9 +115,7 @@ class ConfigMapper:
             },
             "memory_management": {
                 "short_term_max_size": 100,
-                "consolidation_threshold": 50,
                 "maintenance_interval_hours": 1,
-                "consolidation_interval_hours": 6,
                 "stats_interval_hours": 24
             },
             "lifecycle": {
@@ -141,7 +138,6 @@ class ConfigMapper:
                 "maintenance": {
                     "enabled": True,
                     "cleanup_interval_hours": 1,
-                    "consolidation_interval_hours": 6,
                     "statistics_interval_hours": 24,
                     "deep_maintenance_interval_hours": 168
                 }
@@ -257,7 +253,6 @@ class ConfigMapper:
         
         if storage == "minimal":
             mgmt["short_term_max_size"] = 50
-            mgmt["consolidation_threshold"] = 25
             mgmt["maintenance_interval_hours"] = 0.5  # 30 minutes
             maint["cleanup_interval_hours"] = 0.5
             
@@ -267,13 +262,11 @@ class ConfigMapper:
             
         elif storage == "large":
             mgmt["short_term_max_size"] = 200
-            mgmt["consolidation_threshold"] = 100
             mgmt["maintenance_interval_hours"] = 2
             maint["cleanup_interval_hours"] = 2
             
         elif storage == "unlimited":
             mgmt["short_term_max_size"] = 500
-            mgmt["consolidation_threshold"] = 250
             mgmt["maintenance_interval_hours"] = 6
             maint["cleanup_interval_hours"] = 6
             config["memory_scoring"]["importance_threshold"] = 0.5  # Lower threshold
@@ -328,7 +321,6 @@ class ConfigMapper:
         if performance == "performance":
             # Less frequent maintenance
             maint["cleanup_interval_hours"] = 2
-            maint["consolidation_interval_hours"] = 12
             maint["statistics_interval_hours"] = 48
             mgmt["maintenance_interval_hours"] = 2
             
@@ -339,7 +331,6 @@ class ConfigMapper:
         elif performance == "accuracy":
             # More frequent maintenance
             maint["cleanup_interval_hours"] = 0.5
-            maint["consolidation_interval_hours"] = 3
             maint["statistics_interval_hours"] = 12
             mgmt["maintenance_interval_hours"] = 0.5
     
@@ -352,14 +343,7 @@ class ConfigMapper:
         if "importance_threshold" in answers:
             config["memory_scoring"]["importance_threshold"] = answers["importance_threshold"]
         
-        # Consolidation frequency
-        consolidation = answers.get("consolidation_frequency")
-        if consolidation == "frequent":
-            config["memory_management"]["consolidation_interval_hours"] = 2
-            config["lifecycle"]["maintenance"]["consolidation_interval_hours"] = 2
-        elif consolidation == "infrequent":
-            config["memory_management"]["consolidation_interval_hours"] = 24
-            config["lifecycle"]["maintenance"]["consolidation_interval_hours"] = 24
+        # Consolidation functionality has been removed
     
     def _get_template_config(self, template_name: str) -> Dict[str, Any]:
         """Get configuration from a template."""

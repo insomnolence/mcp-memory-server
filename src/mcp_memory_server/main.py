@@ -1,25 +1,33 @@
+import os
 import logging
 from functools import partial
 from sentence_transformers import CrossEncoder
 
-from mcp_memory_server.config import Config
-from mcp_memory_server.memory import HierarchicalMemorySystem, LifecycleManager
-from mcp_memory_server.server import create_app, setup_json_rpc_handler, get_tool_definitions
-from mcp_memory_server.tools import (
+from .config import Config
+from .memory import HierarchicalMemorySystem, LifecycleManager
+from .server import create_app, setup_json_rpc_handler, get_tool_definitions
+from .tools import (
     add_document_tool,
     query_documents_tool, apply_reranking,
     get_memory_stats_tool, get_lifecycle_stats_tool,
-    start_background_maintenance_tool, stop_background_maintenance_tool,
+    start_background_maintenance_tool, stop_background_maintenance_tool, cleanup_expired_memories_tool,
     query_permanent_documents_tool, get_permanence_stats_tool,
     deduplicate_memories_tool, get_deduplication_stats_tool, preview_duplicates_tool,
-    get_query_performance_tool, get_real_time_metrics_tool, export_performance_data_tool
+    get_query_performance_tool, get_real_time_metrics_tool, export_performance_data_tool,
+    get_comprehensive_analytics_tool, get_system_intelligence_tool,
+    get_optimization_recommendations_tool, get_predictive_insights_tool,
+    get_chunk_relationships_tool, get_system_health_assessment_tool,
+    optimize_deduplication_thresholds_tool, get_domain_analysis_tool,
+    get_clustering_analysis_tool, get_advanced_deduplication_metrics_tool,
+    run_advanced_deduplication_tool
 )
 
 
 def main():
     """Main function to initialize and run the refactored MCP server."""
-    # Initialize configuration
-    config = Config()
+    # Initialize configuration - check for environment variable first
+    config_path = os.environ.get('MCP_CONFIG_FILE')
+    config = Config(config_path=config_path)
     
     # Initialize hierarchical memory system
     memory_system = HierarchicalMemorySystem(
@@ -32,6 +40,9 @@ def main():
     
     # Initialize lifecycle manager (Phase 3)
     lifecycle_manager = LifecycleManager(memory_system, config.get_lifecycle_config())
+    
+    # Integrate lifecycle manager with memory system for TTL functionality
+    memory_system.set_lifecycle_manager(lifecycle_manager)
     
     # Initialize reranker
     reranker_config = config.get_reranker_config()
@@ -46,6 +57,7 @@ def main():
         "get_lifecycle_stats": partial(get_lifecycle_stats_tool, lifecycle_manager),
         "start_background_maintenance": partial(start_background_maintenance_tool, lifecycle_manager),
         "stop_background_maintenance": partial(stop_background_maintenance_tool, lifecycle_manager),
+        "cleanup_expired_memories": partial(cleanup_expired_memories_tool, lifecycle_manager),
         # Phase 3.5: Permanence Management Tools
         "query_permanent_documents": partial(query_permanent_documents_tool, memory_system),
         "get_permanence_stats": partial(get_permanence_stats_tool, memory_system),
@@ -57,6 +69,19 @@ def main():
         "get_query_performance": partial(get_query_performance_tool, memory_system),
         "get_real_time_metrics": partial(get_real_time_metrics_tool, memory_system),
         "export_performance_data": partial(export_performance_data_tool, memory_system),
+        # Phase 3: Analytics and Intelligence Tools
+        "get_comprehensive_analytics": partial(get_comprehensive_analytics_tool, memory_system),
+        "get_system_intelligence": partial(get_system_intelligence_tool, memory_system),
+        "get_optimization_recommendations": partial(get_optimization_recommendations_tool, memory_system),
+        "get_predictive_insights": partial(get_predictive_insights_tool, memory_system),
+        "get_chunk_relationships": partial(get_chunk_relationships_tool, memory_system),
+        "get_system_health_assessment": partial(get_system_health_assessment_tool, memory_system),
+        # Phase 3: Advanced Deduplication Tools
+        "optimize_deduplication_thresholds": partial(optimize_deduplication_thresholds_tool, memory_system),
+        "get_domain_analysis": partial(get_domain_analysis_tool, memory_system),
+        "get_clustering_analysis": partial(get_clustering_analysis_tool, memory_system),
+        "get_advanced_deduplication_metrics": partial(get_advanced_deduplication_metrics_tool, memory_system),
+        "run_advanced_deduplication": partial(run_advanced_deduplication_tool, memory_system),
     }
     
     # Get tool definitions
@@ -84,20 +109,25 @@ def query_documents_with_reranking(memory_system, reranker_model, query: str, co
 _global_app = None
 
 # Initialize app
-def get_app():
+def get_app(config_path=None):
     """Get or create the FastAPI app instance."""
     global _global_app
     if _global_app is None:
+        # Set environment variable if provided
+        if config_path:
+            os.environ['MCP_CONFIG_FILE'] = config_path
         _global_app = main()
     return _global_app
 
-# Global app instance for ASGI servers
-app = get_app()
+# Global app instance for ASGI servers - check for environment config
+config_path = os.environ.get('MCP_CONFIG_FILE')
+app = get_app(config_path=config_path)
 
 if __name__ == "__main__":
     import uvicorn
     
-    config = Config()
+    config_path = os.environ.get('MCP_CONFIG_FILE')
+    config = Config(config_path=config_path)
     server_config = config.get_server_config()
     
     uvicorn.run(

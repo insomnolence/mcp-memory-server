@@ -18,14 +18,14 @@ The wizard system integrates the sophisticated modular architecture from `script
 
 ## Features
 
-### 🎨 Professional User Interface
+### Professional User Interface
 - **ANSI Color Support**: Automatic terminal color detection
 - **Progress Indicators**: Visual progress bars and completion tracking
 - **Clear Formatting**: Section headers, bullet points, and consistent styling
 - **Error Handling**: Graceful error recovery with helpful messages
 - **Confirmation Dialogs**: Professional confirmation and backup handling
 
-### 🔧 Comprehensive Configuration Coverage
+### Comprehensive Configuration Coverage
 
 #### Memory Strategy Configuration
 - **Retention Periods**: From session-based (8 hours) to permanent storage
@@ -48,11 +48,11 @@ The wizard system integrates the sophisticated modular architecture from `script
 
 #### Advanced Options
 - **Custom Thresholds**: Fine-tune importance cutoffs for long-term storage
-- **Consolidation Frequency**: Optimize memory organization intervals
+- **Cleanup Frequency**: Optimize memory maintenance intervals
 - **TTL Management**: Time-to-live settings for different content types
 - **Logging Configuration**: Log levels, formats, and output destinations
 
-### 🛠️ Template System
+### Template System
 Pre-built templates provide instant configuration for common scenarios:
 
 - **Development**: Optimized for software development with code and debugging focus
@@ -62,7 +62,7 @@ Pre-built templates provide instant configuration for common scenarios:
 - **Minimal**: Resource-efficient with aggressive cleanup for limited systems
 - **Maximum**: Extensive retention with minimal cleanup for abundant resources
 
-### 🔍 Validation & Preview
+### Validation & Preview
 - **Real-time Validation**: Comprehensive configuration validation with clear error messages
 - **Impact Previews**: Human-readable explanations of configuration choices
 - **Scenario Examples**: Concrete examples showing how settings affect behavior

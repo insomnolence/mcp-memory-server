@@ -14,13 +14,13 @@ def validate_config(config_path: str = "config.json") -> bool:
     try:
         config_file = Path(config_path)
         if not config_file.exists():
-            print(f"❌ Configuration file not found: {config_path}")
+            print(f"ERROR: Configuration file not found: {config_path}")
             return False
         
         with open(config_file, 'r') as f:
             config = json.load(f)
         
-        print(f"✅ Configuration file loaded: {config_path}")
+        print(f"SUCCESS: Configuration file loaded: {config_path}")
         
         # Required sections
         required_sections = [
@@ -37,7 +37,7 @@ def validate_config(config_path: str = "config.json") -> bool:
                 missing_sections.append(section)
         
         if missing_sections:
-            print(f"❌ Missing required sections: {missing_sections}")
+            print(f"ERROR: Missing required sections: {missing_sections}")
             return False
         
         # Validate specific settings
@@ -63,39 +63,39 @@ def validate_config(config_path: str = "config.json") -> bool:
             errors.append("server.port must be a valid port number (1-65535)")
         
         if errors:
-            print("❌ Configuration errors found:")
+            print("ERROR: Configuration errors found:")
             for error in errors:
                 print(f"   - {error}")
             return False
         
-        print("✅ Configuration validation passed!")
-        print(f"📊 Database: {db_config.get('persist_directory')}")
-        print(f"🧠 Embedding model: {config['embeddings'].get('model_name')}")
-        print(f"🚀 Server: {server.get('host')}:{server.get('port')}")
+        print("SUCCESS: Configuration validation passed!")
+        print(f"Database: {db_config.get('persist_directory')}")
+        print(f"Embedding model: {config['embeddings'].get('model_name')}")
+        print(f"Server: {server.get('host')}:{server.get('port')}")
         
         return True
         
     except json.JSONDecodeError as e:
-        print(f"❌ Invalid JSON in configuration file: {e}")
+        print(f"ERROR: Invalid JSON in configuration file: {e}")
         return False
     except Exception as e:
-        print(f"❌ Error validating configuration: {e}")
+        print(f"ERROR: Error validating configuration: {e}")
         return False
 
 def main():
     """Main validation function"""
     config_path = sys.argv[1] if len(sys.argv) > 1 else "config.json"
     
-    print(f"🔍 Validating MCP server configuration: {config_path}")
+    print(f"Validating MCP server configuration: {config_path}")
     print("=" * 60)
     
     if validate_config(config_path):
         print("=" * 60)
-        print("🎉 Configuration is valid and ready to use!")
+        print("Configuration is valid and ready to use!")
         sys.exit(0)
     else:
         print("=" * 60)
-        print("💥 Configuration validation failed!")
+        print("Configuration validation failed!")
         sys.exit(1)
 
 if __name__ == "__main__":

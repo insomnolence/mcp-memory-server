@@ -92,6 +92,10 @@ class DomainPatternEngine:
         keywords = pattern_config.get('keywords', [])
         patterns = pattern_config.get('regex_patterns', [])
         bonus = pattern_config.get('bonus', pattern_config.get('boost', 0.0))  # Try 'bonus' first, then 'boost'
+        
+        # Validate bonus is a number
+        if not isinstance(bonus, (int, float)):
+            return 0.0
         match_mode = pattern_config.get('match_mode', 'any')  # 'any', 'all', 'weighted'
         
         matches = []

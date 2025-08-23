@@ -338,29 +338,40 @@ class LifecycleManager:
             try:
                 collection = getattr(self.memory_system, f"{coll_name}_memory")
                 
-                # Get all documents to check for expiry
-                docs = collection.similarity_search("", k=10000)  # Large number to get all
+                # Get all documents with IDs to check for expiry
+                all_data = collection.get()
+                total_docs = len(all_data.get('ids', []))
                 
-                expired_docs = []
-                for doc in docs:
-                    if self.ttl_manager.should_expire(doc.metadata):
-                        expired_docs.append(doc)
+                expired_doc_ids = []
+                if all_data.get('ids') and all_data.get('metadatas'):
+                    for doc_id, metadata in zip(all_data['ids'], all_data['metadatas']):
+                        if metadata and self.ttl_manager.should_expire(metadata):
+                            expired_doc_ids.append(doc_id)
                 
-                # Note: ChromaDB doesn't have a direct delete by document method
-                # In a production system, you'd implement document removal here
-                # For now, we'll log what would be removed
+                # Actually delete expired documents
+                cleanup_performed = False
+                if expired_doc_ids:
+                    try:
+                        collection.delete(ids=expired_doc_ids)
+                        cleanup_performed = True
+                        logging.info(f"Deleted {len(expired_doc_ids)} expired documents from {coll_name}")
+                    except Exception as delete_error:
+                        error_msg = f"Failed to delete expired documents from {coll_name}: {delete_error}"
+                        results['errors'].append(error_msg)
+                        logging.error(error_msg)
                 
                 results['cleaned_collections'].append({
                     'collection': coll_name,
-                    'total_docs': len(docs),
-                    'expired_docs': len(expired_docs),
-                    'cleanup_performed': False  # Would be True in full implementation
+                    'total_docs': total_docs,
+                    'expired_docs': len(expired_doc_ids),
+                    'cleanup_performed': cleanup_performed,
+                    'deleted_doc_ids': expired_doc_ids if cleanup_performed else []
                 })
                 
-                results['total_expired'] += len(expired_docs)
-                results['total_checked'] += len(docs)
+                results['total_expired'] += len(expired_doc_ids)
+                results['total_checked'] += total_docs
                 
-                logging.info(f"Cleanup check for {coll_name}: {len(expired_docs)}/{len(docs)} expired")
+                logging.info(f"Cleanup check for {coll_name}: {len(expired_doc_ids)}/{total_docs} expired")
                 
             except Exception as e:
                 error_msg = f"Error cleaning {coll_name}: {str(e)}"
@@ -580,7 +591,7 @@ class LifecycleManager:
             },
             'maintenance': {
                 'enabled': self.maintenance_enabled,
-                'thread_active': self._maintenance_thread and self._maintenance_thread.is_alive(),
+                'thread_active': bool(self._maintenance_thread and self._maintenance_thread.is_alive()),
                 'last_cleanup': self._last_cleanup,
                 'last_statistics': self._last_statistics,
                 'last_aging_refresh': self._last_aging_refresh,

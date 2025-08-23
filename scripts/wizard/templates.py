@@ -46,7 +46,6 @@ class ConfigTemplates:
                 "collections": {
                     "short_term": "short_term_memory",
                     "long_term": "long_term_memory",
-                    "consolidated": "consolidated_memory",
                     "legacy": "knowledge_base"
                 }
             },
@@ -78,9 +77,7 @@ class ConfigTemplates:
             },
             "memory_management": {
                 "short_term_max_size": 100,
-                "consolidation_threshold": 50,
                 "maintenance_interval_hours": 1,
-                "consolidation_interval_hours": 6,
                 "stats_interval_hours": 24
             },
             "lifecycle": {
@@ -136,8 +133,7 @@ class ConfigTemplates:
                 }
             },
             "memory_management": {
-                "short_term_max_size": 150,
-                "consolidation_threshold": 75
+                "short_term_max_size": 150
             }
         }
     
@@ -167,9 +163,7 @@ class ConfigTemplates:
         return {
             "memory_management": {
                 "short_term_max_size": 50,
-                "consolidation_threshold": 25,
                 "maintenance_interval_hours": 0.5,
-                "consolidation_interval_hours": 3,
                 "stats_interval_hours": 12
             },
             "lifecycle": {
@@ -178,8 +172,7 @@ class ConfigTemplates:
                     "static_jitter": 43200
                 },
                 "maintenance": {
-                    "cleanup_interval_hours": 0.5,
-                    "consolidation_interval_hours": 3
+                    "cleanup_interval_hours": 0.5
                 }
             }
         }
@@ -193,9 +186,7 @@ class ConfigTemplates:
             },
             "memory_management": {
                 "short_term_max_size": 500,
-                "consolidation_threshold": 250,
                 "maintenance_interval_hours": 6,
-                "consolidation_interval_hours": 24,
                 "stats_interval_hours": 48
             },
             "lifecycle": {
@@ -207,8 +198,7 @@ class ConfigTemplates:
                     "enabled": False  # Disable aging for maximum retention
                 },
                 "maintenance": {
-                    "cleanup_interval_hours": 6,
-                    "consolidation_interval_hours": 24
+                    "cleanup_interval_hours": 6
                 }
             }
         }
@@ -253,6 +243,5 @@ class ConfigProfiler:
         if storage_gb < 5:
             # Limited storage
             optimized.setdefault("memory_management", {})["short_term_max_size"] = 50
-            optimized.setdefault("memory_management", {})["consolidation_threshold"] = 25
         
         return optimized

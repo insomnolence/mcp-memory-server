@@ -116,14 +116,26 @@ def get_deduplication_stats_tool(memory_system) -> dict:
         # Get deduplication system
         deduplicator = getattr(memory_system, 'deduplicator', None)
         if not deduplicator:
+            # Return MCP-compliant format when deduplication is disabled
             return {
-                "success": False,
-                "message": "Deduplication system not initialized",
-                "stats": {}
+                "total_duplicates_found": 0,
+                "enabled": False,
+                "message": "Deduplication system not initialized"
             }
         
         # Get comprehensive statistics
-        stats = deduplicator.get_deduplication_stats()
+        if hasattr(deduplicator, 'get_deduplication_stats'):
+            stats = deduplicator.get_deduplication_stats()
+        elif isinstance(deduplicator, dict):
+            # Handle case where deduplicator is a dict (fallback)
+            stats = deduplicator
+        else:
+            # Fallback for unknown deduplicator types
+            stats = {
+                'enabled': False,
+                'total_duplicates_found': 0,
+                'message': 'Deduplication system not properly initialized'
+            }
         
         # Add system health indicators
         health_score = 100.0
@@ -147,18 +159,20 @@ def get_deduplication_stats_tool(memory_system) -> dict:
             estimated_savings_mb = stats.get('total_storage_saved', 0) * 0.001  # Rough estimate
             stats['estimated_storage_savings_mb'] = round(estimated_savings_mb, 2)
         
+        # Return MCP-compliant format
         return {
-            "success": True,
-            "message": "Deduplication statistics retrieved successfully",
-            "stats": stats
+            "total_duplicates_found": stats.get('total_duplicates_found', 0),
+            "enabled": stats.get('enabled', True)
         }
         
     except Exception as e:
         logging.error(f"Failed to get deduplication stats: {e}")
+        # Return MCP-compliant format even on error
         return {
-            "success": False,
-            "message": f"Failed to get deduplication stats: {str(e)}",
-            "error": str(e)
+            "total_duplicates_found": 0,
+            "enabled": False,
+            "error": str(e),
+            "message": f"Failed to get deduplication stats: {str(e)}"
         }
 
 
@@ -179,18 +193,18 @@ def preview_duplicates_tool(memory_system, collection: str = "short_term",
         deduplicator = getattr(memory_system, 'deduplicator', None)
         if not deduplicator:
             return {
-                "success": False,
-                "message": "Deduplication system not initialized",
-                "duplicates": []
+                "duplicates_found": 0,
+                "preview_pairs": [],
+                "message": "Deduplication system not initialized"
             }
         
         # Get collection
         target_collection = getattr(memory_system, f"{collection}_memory", None)
         if target_collection is None:
             return {
-                "success": False,
-                "message": f"Collection '{collection}' not found",
-                "duplicates": []
+                "duplicates_found": 0,
+                "preview_pairs": [],
+                "message": f"Collection '{collection}' not found"
             }
         
         # Run preview (dry run)
@@ -217,25 +231,20 @@ def preview_duplicates_tool(memory_system, collection: str = "short_term",
             }
             duplicates.append(duplicate_info)
         
+        # Return MCP-compliant format
         return {
-            "success": True,
-            "message": f"Found {len(duplicate_pairs)} potential duplicates in {collection} collection",
+            "duplicates_found": len(duplicate_pairs),
+            "preview_pairs": duplicates[:limit],
             "collection": collection,
-            "total_duplicates_found": len(duplicate_pairs),
-            "duplicates_shown": len(duplicates),
-            "duplicates": duplicates,
             "processing_time": result.get("processing_time", 0.0),
-            "recommendation": (
-                "Run deduplicate_memories with dry_run=false to apply changes" 
-                if duplicates else 
-                "No duplicates found - collection is clean"
-            )
+            "message": f"Found {len(duplicate_pairs)} potential duplicates in {collection} collection"
         }
         
     except Exception as e:
         logging.error(f"Failed to preview duplicates: {e}")
         return {
-            "success": False,
-            "message": f"Failed to preview duplicates: {str(e)}",
-            "error": str(e)
+            "duplicates_found": 0,
+            "preview_pairs": [],
+            "error": str(e),
+            "message": f"Failed to preview duplicates: {str(e)}"
         }

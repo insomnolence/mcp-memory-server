@@ -14,9 +14,10 @@ def get_lifecycle_stats_tool(lifecycle_manager: LifecycleManager) -> Dict[str, A
     try:
         stats = lifecycle_manager.get_lifecycle_stats()
         
+        # Return MCP-compliant format
         return {
-            "success": True,
-            "lifecycle_stats": stats
+            "ttl_manager": stats.get('ttl_manager', {}),
+            "maintenance": stats.get('maintenance', {})
         }
         
     except Exception as e:

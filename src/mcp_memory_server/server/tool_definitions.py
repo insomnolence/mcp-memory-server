@@ -111,6 +111,21 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
             }
         },
         {
+            "name": "cleanup_expired_memories",
+            "description": "Manually trigger cleanup of expired documents based on TTL. Useful for testing and immediate cleanup.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "collection": {
+                        "type": "string",
+                        "description": "Specific collection to clean ('short_term' or 'long_term'). If not specified, cleans all collections.",
+                        "enum": ["short_term", "long_term"]
+                    }
+                },
+                "required": []
+            }
+        },
+        {
             "name": "query_permanent_documents",
             "description": "Query only permanent documents that never expire (importance ≥ 0.95 or explicitly marked permanent).",
             "inputSchema": {
@@ -154,7 +169,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     "dry_run": {
                         "type": "boolean",
                         "description": "If true, only analyze and report potential duplicates without making changes.",
-                        "default": false
+                        "default": False
                     }
                 },
                 "required": []
@@ -234,6 +249,157 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                         "description": "Time window for data export.",
                         "enum": ["hour", "day", "week", "all"],
                         "default": "all"
+                    }
+                },
+                "required": []
+            }
+        },
+        {
+            "name": "get_comprehensive_analytics",
+            "description": "Get comprehensive system analytics with intelligence insights including storage patterns, deduplication effectiveness, query performance, and predictive analytics for optimization planning.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        },
+        {
+            "name": "get_system_intelligence",
+            "description": "Get intelligent insights for specific system areas with focused analysis and recommendations for targeted optimization.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "focus_area": {
+                        "type": "string",
+                        "description": "Focus area for intelligence analysis.",
+                        "enum": ["storage", "performance", "deduplication", "all"],
+                        "default": "all"
+                    }
+                },
+                "required": []
+            }
+        },
+        {
+            "name": "get_optimization_recommendations", 
+            "description": "Get intelligent optimization recommendations with ROI scoring and implementation guidance for system improvements.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "priority_filter": {
+                        "type": "string",
+                        "description": "Filter recommendations by priority level.",
+                        "enum": ["high", "medium", "low", "all"],
+                        "default": "all"
+                    }
+                },
+                "required": []
+            }
+        },
+        {
+            "name": "get_predictive_insights",
+            "description": "Get predictive analytics insights for storage growth, performance trends, and resource requirements planning.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "prediction_type": {
+                        "type": "string", 
+                        "description": "Type of predictive analysis to perform.",
+                        "enum": ["storage", "performance", "resources", "all"],
+                        "default": "all"
+                    }
+                },
+                "required": []
+            }
+        },
+        {
+            "name": "get_chunk_relationships",
+            "description": "Get chunk relationship statistics and analysis, or specific document context with relationship history and deduplication information.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "document_id": {
+                        "type": "string",
+                        "description": "Optional document ID to get specific relationship context."
+                    }
+                },
+                "required": []
+            }
+        },
+        {
+            "name": "get_system_health_assessment",
+            "description": "Get comprehensive system health assessment with intelligence insights, critical issue identification, and improvement recommendations.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        },
+        {
+            "name": "optimize_deduplication_thresholds",
+            "description": "Optimize deduplication thresholds automatically using advanced machine learning and performance analytics to improve system efficiency.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        },
+        {
+            "name": "get_domain_analysis",
+            "description": "Analyze documents by domain (code, text, data, documentation) to provide intelligent threshold recommendations for domain-specific deduplication.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "collection": {
+                        "type": "string",
+                        "description": "Collection to analyze for domain patterns.",
+                        "enum": ["short_term", "long_term"],
+                        "default": "short_term"
+                    }
+                },
+                "required": []
+            }
+        },
+        {
+            "name": "get_clustering_analysis",
+            "description": "Perform semantic clustering analysis on documents to identify content patterns and similarity groups for advanced deduplication insights.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "collection": {
+                        "type": "string",
+                        "description": "Collection to perform clustering analysis on.",
+                        "enum": ["short_term", "long_term"],
+                        "default": "short_term"
+                    }
+                },
+                "required": []
+            }
+        },
+        {
+            "name": "get_advanced_deduplication_metrics",
+            "description": "Get comprehensive advanced deduplication performance metrics including domain analysis, clustering effectiveness, and optimization insights.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        },
+        {
+            "name": "run_advanced_deduplication",
+            "description": "Run advanced deduplication with domain awareness, semantic clustering, and intelligent threshold adjustment for superior duplicate detection.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "collection": {
+                        "type": "string",
+                        "description": "Collection to perform advanced deduplication on.",
+                        "enum": ["short_term", "long_term"],
+                        "default": "short_term"
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": "If true, only analyze and report potential optimizations without making changes.",
+                        "default": False
                     }
                 },
                 "required": []

@@ -1,252 +1,65 @@
 # MCP Memory Server - Configuration Guide
 
-## 🚀 Quick Start
+## Quick Start
 
 The MCP Memory Server uses a single configuration file (`config.json`) with optional domain-specific overrides for different use cases.
 
 ### Simple Setup
 ```bash
 # Use default configuration
-python3 scripts/start_server.py
+python scripts/start_server.py
 
 # Use domain-specific configuration
-MCP_DOMAIN=business-development python3 scripts/start_server.py
+MCP_DOMAIN=business-development python scripts/start_server.py
 ```
 
 ### Available Domains
-- `software-development` (default) - Code, bugs, solutions, architecture
 - `business-development` - Revenue, deals, KPIs, market intelligence
 - `research` - Academic research, methodology, findings, evidence
 - `creative-writing` - Characters, plot, dialogue, world-building
 - `cooking` - Recipes, techniques, ingredients, innovations
-- `personal` - General personal knowledge and conversations
 
-## 📁 Configuration Architecture
+## Configuration Architecture
 
 ### Directory Structure
 ```
 config/
 ├── domains/                    # Domain-specific configurations
 │   ├── business-development.json
-│   ├── research.json
 │   ├── creative-writing.json
+│   ├── research.json
 │   └── cooking.json
-└── example.json               # Configuration template
-
-config.json                    # Main configuration file
+└── config.example.json         # Base configuration template
 ```
 
-### How Configurations Merge
-1. **Base Configuration**: `config.json` (complete configuration)
-2. **Domain Overlay**: Domain config (e.g., `config/domains/business-development.json`) 
-3. **Final Result**: Merged configuration with domain-specific patterns
+### Configuration Loading Priority
+1. **Environment Variable**: `MCP_CONFIG_FILE` (highest priority)
+2. **Domain Configuration**: `MCP_DOMAIN` environment variable
+3. **Default**: `config.json` in project root
 
-## 🎯 Domain Configuration
+## Core Configuration Sections
 
-### Domain Pattern System
-Each domain defines important keywords and patterns for content scoring:
-
+### Server Configuration
 ```json
 {
-  "memory_scoring": {
-    "domain_patterns": {
-      "case_sensitive": false,
-      "patterns": {
-        "domain_priority": {
-          "keywords": ["important", "keywords", "for", "this", "domain"],
-          "bonus": 0.4,
-          "match_mode": "any"
-        },
-        "critical_content": {
-          "keywords": ["critical", "urgent", "breaking"],
-          "bonus": 0.5,
-          "match_mode": "any"
-        }
-      },
-      "permanence_triggers": {
-        "high_importance": {
-          "keywords": ["breakthrough", "must remember"],
-          "boost": 0.25
-        }
-      }
-    }
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "title": "MCP Memory Server",
+    "version": "2.0.0",
+    "protocol_version": "2025-06-18"
   }
 }
 ```
 
-### Domain Examples
-
-#### Business Development (`config/domains/business-development.json`)
+### Database Configuration
 ```json
 {
-  "memory_scoring": {
-    "domain_patterns": {
-      "patterns": {
-        "revenue_opportunities": {
-          "keywords": ["revenue", "profit", "deal", "contract", "sale", "ROI", "KPI"],
-          "bonus": 0.4,
-          "match_mode": "any"
-        },
-        "market_intelligence": {
-          "keywords": ["competitor", "market share", "industry trend", "analysis"],
-          "bonus": 0.35,
-          "match_mode": "any"
-        },
-        "client_relationship": {
-          "keywords": ["client", "customer", "stakeholder", "partnership"],
-          "bonus": 0.3,
-          "match_mode": "any"
-        }
-      },
-      "permanence_triggers": {
-        "critical_business": {
-          "keywords": ["major deal", "strategic partnership", "acquisition"],
-          "boost": 0.3
-        }
-      }
-    }
-  }
-}
-```
-
-#### Research (`config/domains/research.json`)
-```json
-{
-  "memory_scoring": {
-    "domain_patterns": {
-      "patterns": {
-        "findings": {
-          "keywords": ["discovered", "evidence", "result", "conclusion", "significant"],
-          "bonus": 0.45,
-          "match_mode": "any"
-        },
-        "methodology": {
-          "keywords": ["methodology", "protocol", "procedure", "approach"],
-          "bonus": 0.35,
-          "match_mode": "any"
-        },
-        "data_analysis": {
-          "keywords": ["statistical", "correlation", "p-value", "hypothesis"],
-          "bonus": 0.4,
-          "match_mode": "any"
-        }
-      },
-      "permanence_triggers": {
-        "breakthrough": {
-          "keywords": ["breakthrough", "groundbreaking", "novel discovery"],
-          "boost": 0.4
-        }
-      }
-    }
-  }
-}
-```
-
-## 📊 Memory System Configuration
-
-### Hierarchical Memory Tiers
-```json
-{
-  "memory_scoring": {
-    "importance_threshold": 0.7,
-    "scoring_weights": {
-      "semantic": 0.4,
-      "recency": 0.3, 
-      "frequency": 0.2,
-      "importance": 0.1
-    },
-    "content_scoring": {
-      "code_bonus": 0.3,
-      "error_bonus": 0.2,
-      "solution_bonus": 0.3,
-      "important_bonus": 0.2,
-      "language_bonus": 0.1
-    }
-  }
-}
-```
-
-### TTL (Time-To-Live) System
-```json
-{
-  "lifecycle": {
-    "ttl": {
-      "high_frequency_base": 300,      // 5 minutes
-      "high_frequency_jitter": 60,     // ±1 minute
-      "medium_frequency_base": 3600,   // 1 hour
-      "medium_frequency_jitter": 600,  // ±10 minutes
-      "low_frequency_base": 86400,     // 1 day
-      "low_frequency_jitter": 7200,    // ±2 hours
-      "static_base": 604800,           // 1 week
-      "static_jitter": 86400           // ±1 day
-    },
-    "aging": {
-      "enabled": true,
-      "decay_rate": 0.1,
-      "minimum_score": 0.1,
-      "refresh_threshold_days": 7.0
-    }
-  }
-}
-```
-
-### Permanence System
-```json
-{
-  "memory_scoring": {
-    "permanence_factors": {
-      "architecture_decision": 0.2,
-      "critical_bug_fix": 0.15,
-      "core_documentation": 0.1,
-      "user_explicit_permanent": 0.25,
-      "system_configuration": 0.1
-    }
-  }
-}
-```
-
-## 🔧 Advanced Configuration
-
-### Custom Domain Creation
-Create your own domain for any use case:
-
-```json
-{
-  "memory_scoring": {
-    "domain_patterns": {
-      "patterns": {
-        "astronomy_observations": {
-          "keywords": ["telescope", "galaxy", "nebula", "observation", "discovery"],
-          "bonus": 0.4,
-          "match_mode": "any"
-        },
-        "celestial_events": {
-          "keywords": ["eclipse", "transit", "conjunction", "meteor"],
-          "bonus": 0.35,
-          "match_mode": "any"
-        }
-      },
-      "permanence_triggers": {
-        "major_discovery": {
-          "keywords": ["new planet", "breakthrough observation"],
-          "boost": 0.3
-        }
-      }
-    }
-  }
-}
-```
-
-### Background Maintenance
-```json
-{
-  "lifecycle": {
-    "maintenance": {
-      "enabled": true,
-      "cleanup_interval_hours": 1,
-      "consolidation_interval_hours": 6,
-      "statistics_interval_hours": 24,
-      "deep_maintenance_interval_hours": 168
+  "database": {
+    "persist_directory": "./chroma_db_advanced",
+    "collections": {
+      "short_term": "short_term_memory",
+      "long_term": "long_term_memory"
     }
   }
 }
@@ -258,153 +71,381 @@ Create your own domain for any use case:
   "embeddings": {
     "model_name": "sentence-transformers/all-MiniLM-L6-v2",
     "chunk_size": 1000,
-    "chunk_overlap": 100,
-    "device": "auto"
+    "chunk_overlap": 100
   },
   "reranker": {
-    "model_name": "cross-encoder/ms-marco-MiniLM-L-6-v2",
-    "enabled": true
+    "model_name": "cross-encoder/ms-marco-MiniLM-L-6-v2"
   }
 }
 ```
 
-## 🚀 Usage Patterns
+## Memory Management Configuration
 
-### Multiple Domain Setup
-```bash
-# Business server
-MCP_DOMAIN=business-development python3 scripts/start_server.py &
-
-# Research server (different port in domain config)
-MCP_DOMAIN=research python3 scripts/start_server.py &
+### Importance Scoring
+```json
+{
+  "memory_scoring": {
+    "decay_constant": 86400,
+    "max_access_count": 100,
+    "importance_threshold": 0.7,
+    "scoring_weights": {
+      "semantic": 0.4,
+      "recency": 0.3,
+      "frequency": 0.2,
+      "importance": 0.1
+    }
+  }
+}
 ```
 
-### Custom Configuration File
-```bash
-# Use specific config file
-python3 scripts/start_server.py --config /path/to/custom/config.json
+### Memory Thresholds
+```json
+{
+  "memory_management": {
+    "short_term_max_size": 100,
+    "short_term_threshold": 0.4,
+    "long_term_threshold": 0.7
+  }
+}
 ```
 
-### Environment Variables
-```bash
-export MCP_DOMAIN=creative-writing
-export MCP_DATA_PATH=/custom/data/location
-python3 scripts/start_server.py
+### TTL Configuration
+```json
+{
+  "lifecycle": {
+    "ttl": {
+      "high_frequency_base": 1800,      # 30 minutes
+      "high_frequency_jitter": 300,     # 5 minutes
+      "medium_frequency_base": 18000,   # 5 hours
+      "medium_frequency_jitter": 1800,  # 30 minutes
+      "low_frequency_base": 86400,      # 24 hours
+      "low_frequency_jitter": 3600,     # 1 hour
+      "static_base": 604800,            # 1 week
+      "static_jitter": 43200             # 12 hours
+    }
+  }
+}
 ```
 
-## 📋 Configuration Validation
+## Advanced Features Configuration
 
-### Validate Configuration
-```bash
-# Validate current config
-python3 scripts/validate_config.py
-
-# Validate specific file
-python3 scripts/validate_config.py config/domains/business-development.json
-
-# Validate with domain override
-MCP_DOMAIN=research python3 scripts/validate_config.py
+### Deduplication System
+```json
+{
+  "deduplication": {
+    "enabled": true,
+    "similarity_threshold": 0.90,
+    "min_importance_diff": 0.05,
+    "preserve_high_access": true,
+    "collections": ["short_term", "long_term"],
+    "advanced_features": {
+      "domain_awareness": {
+        "enabled": true,
+        "domain_thresholds": {
+          "code": 0.95,
+          "text": 0.85,
+          "data": 0.90,
+          "documentation": 0.80
+        }
+      },
+      "semantic_clustering": {
+        "enabled": true,
+        "max_clusters": 10,
+        "min_cluster_size": 2
+      },
+      "enable_auto_optimization": true
+    }
+  }
+}
 ```
 
-### Common Validation Errors
-- Missing required sections
-- Invalid scoring weight sums (must total 1.0)
-- Invalid file paths
-- Malformed JSON syntax
-- Invalid port numbers
-- Missing domain files
+### Analytics Configuration
+```json
+{
+  "analytics": {
+    "enabled": true,
+    "intelligence_system": {
+      "enabled": true,
+      "analysis_depth": "basic",
+      "roi_scoring_enabled": true
+    },
+    "performance_monitoring": {
+      "track_generation_time": true,
+      "track_resource_usage": false
+    }
+  }
+}
+```
 
-## 🔄 Migration Guide
+### Chunk Relationships
+```json
+{
+  "chunk_relationships": {
+    "enabled": true,
+    "context_window_size": 2,
+    "track_deduplication_history": true,
+    "preserve_document_structure": true
+  }
+}
+```
 
-### From Environment-Based Structure (Pre-Simplification)
-If upgrading from the old environment-based structure:
+## Domain Pattern Configuration
 
-1. **Use existing config.json:**
-   - The system now uses a single `config.json` file
-   - Environment complexity has been removed
+### Pattern Structure
+```json
+{
+  "memory_scoring": {
+    "domain_patterns": {
+      "case_sensitive": false,
+      "patterns": {
+        "high_value_content": {
+          "keywords": ["important", "critical", "urgent"],
+          "bonus": 0.3,
+          "match_mode": "any"
+        },
+        "technical_content": {
+          "keywords": ["function", "error", "implementation"],
+          "bonus": 0.2,
+          "match_mode": "any"
+        }
+      }
+    }
+  }
+}
+```
 
-2. **Update database paths:**
-   ```json
-   // Updated path (simplified)
-   "persist_directory": "./data/memory"
-   ```
+### Permanence Triggers
+```json
+{
+  "memory_scoring": {
+    "domain_patterns": {
+      "permanence_triggers": {
+        "critical_information": {
+          "keywords": ["critical", "permanent", "must remember"],
+          "boost": 0.25
+        }
+      }
+    }
+  }
+}
+```
 
-3. **Test new structure:**
+## Environment-Specific Configuration
+
+### Development Environment
+```json
+{
+  "logging": {
+    "level": "DEBUG",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file": "logs/mcp_server.log"
+  },
+  "lifecycle": {
+    "maintenance": {
+      "cleanup_interval_hours": 1,
+      "deep_maintenance_interval_hours": 6
+    }
+  }
+}
+```
+
+### Production Environment
+```json
+{
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(levelname)s - %(message)s",
+    "file": "/var/log/mcp-server/server.log"
+  },
+  "lifecycle": {
+    "maintenance": {
+      "cleanup_interval_hours": 6,
+      "deep_maintenance_interval_hours": 24
+    }
+  }
+}
+```
+
+## Configuration Validation
+
+### Using the Configuration Wizard
+```bash
+# Interactive configuration
+python scripts/config_wizard.py
+
+# Template-based setup
+python scripts/config_wizard.py template
+
+# Validation only
+python scripts/validate_config.py
+```
+
+### Manual Validation
+```bash
+# Test configuration loading
+python -c "
+from src.mcp_memory_server.config import Config
+config = Config('config.json')
+print('Configuration loaded successfully')
+print(f'Server will run on {config.get_server_config()[\"host\"]}:{config.get_server_config()[\"port\"]}')
+"
+```
+
+## Performance Tuning
+
+### Memory Usage Optimization
+```json
+{
+  "memory_management": {
+    "short_term_max_size": 25        # Reduce for lower memory
+  },
+  "lifecycle": {
+    "maintenance": {
+      "cleanup_interval_hours": 2,    # More frequent cleanup
+      "statistics_interval_hours": 6
+    }
+  }
+}
+```
+
+### Query Performance Optimization
+```json
+{
+  "embeddings": {
+    "chunk_size": 500,               # Smaller chunks for faster processing
+    "chunk_overlap": 50
+  },
+  "analytics": {
+    "caching": {
+      "enabled": true,
+      "cache_duration_minutes": 15,
+      "max_cache_size": 100
+    }
+  }
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### Server Won't Start
+1. **Check Configuration Syntax**:
    ```bash
-   python3 scripts/start_server.py
+   python -m json.tool config.json
    ```
 
-### From Hardcoded Values
-All previous hardcoded defaults are preserved as fallbacks:
-- No breaking changes to existing functionality
-- Existing data remains accessible
-- Configuration enhances but doesn't replace defaults
+2. **Validate Paths**:
+   ```bash
+   python scripts/validate_config.py
+   ```
 
-## 🛠️ Troubleshooting
+3. **Check Port Availability**:
+   ```bash
+   netstat -an | grep 8080
+   ```
 
-### Server Won't Start
-```bash
-# Check configuration
-python3 scripts/validate_config.py
+#### Memory Issues
+1. **Reduce Memory Usage**:
+   - Decrease `short_term_max_size`
+   - Increase cleanup frequency
+   - Enable more aggressive TTL settings
 
-# Test specific domain
-MCP_DOMAIN=software-development python3 scripts/validate_config.py
+2. **Monitor Memory Usage**:
+   ```bash
+   # Check memory statistics via MCP tools
+   # Use get_memory_stats tool
+   ```
 
-# Check paths exist
-ls -la data/memory/
+#### Slow Performance
+1. **Enable Analytics**:
+   ```json
+   {
+     "analytics": {
+       "performance_monitoring": {
+         "track_generation_time": true
+       }
+     }
+   }
+   ```
+
+2. **Optimize Embeddings**:
+   - Use smaller embedding models for faster processing
+   - Reduce chunk sizes
+   - Enable caching
+
+### Debug Mode
+```json
+{
+  "logging": {
+    "level": "DEBUG"
+  },
+  "analytics": {
+    "performance_monitoring": {
+      "track_generation_time": true,
+      "track_resource_usage": true
+    }
+  }
+}
 ```
 
-### Domain Not Working
-```bash
-# Verify domain file exists
-ls config/domains/your-domain.json
+## Configuration Examples
 
-# Check domain merging
-MCP_DOMAIN=your-domain python3 scripts/validate_config.py
-
-# Review scoring patterns
-cat config/domains/your-domain.json | grep -A10 "patterns"
+### Minimal Configuration
+```json
+{
+  "server": {"host": "127.0.0.1", "port": 8080},
+  "database": {"persist_directory": "./data"},
+  "embeddings": {"model_name": "sentence-transformers/all-MiniLM-L6-v2"}
+}
 ```
 
-### Performance Issues
-1. **High memory usage**: Lower `short_term_max_size`
-2. **Slow queries**: Adjust `chunk_size` and scoring thresholds
-3. **TTL issues**: Review lifecycle configuration
-4. **Pattern matching**: Optimize keyword lists in domain configs
-
-### Connection Issues
-```bash
-# Check server status
-curl http://127.0.0.1:8081/health
-
-# Review server logs
-tail -f mcp_server.log
-
-# Test with debug logging
-python3 scripts/start_server.py
+### High-Performance Configuration
+```json
+{
+  "memory_management": {
+    "short_term_max_size": 200
+  },
+  "deduplication": {"enabled": true},
+  "analytics": {
+    "enabled": true,
+    "caching": {"enabled": true}
+  }
+}
 ```
 
-## 📚 Best Practices
+### Resource-Constrained Configuration
+```json
+{
+  "memory_management": {
+    "short_term_max_size": 10
+  },
+  "lifecycle": {
+    "maintenance": {
+      "cleanup_interval_hours": 1
+    }
+  },
+  "deduplication": {"enabled": false}
+}
+```
 
-### Configuration Management
-1. **Version control** your custom domain configurations
-2. **Test configurations** before deployment
-3. **Document custom patterns** for your team
-4. **Monitor performance** after configuration changes
-5. **Backup data** before major configuration updates
+## Security Considerations
 
-### Domain Design
-1. **Use specific keywords** relevant to your domain
-2. **Include action words** (achieved, discovered, critical)
-3. **Test scoring** with sample content
-4. **Iterate based on results** 
-5. **Consider user mental models** when choosing keywords
+### Network Security
+- Bind to `127.0.0.1` for local-only access
+- Use appropriate firewall rules for network access
+- Consider reverse proxy for production deployments
 
-### Performance Optimization
-1. **Tune importance thresholds** based on your content volume
-2. **Adjust TTL settings** for your retention needs
-3. **Monitor memory usage** and adjust collection sizes
-4. **Use appropriate chunk sizes** for your content types
-5. **Enable maintenance** for long-running deployments
+### Data Privacy
+- Configure appropriate log levels to avoid sensitive data in logs
+- Use secure storage paths with appropriate permissions
+- Regular cleanup of expired data
 
-The configuration system is designed to be flexible and extensible. Start with the provided examples and customize based on your specific needs and usage patterns.
+### Access Control
+- Implement client authentication if exposing over network
+- Use environment variables for sensitive configuration
+- Restrict file system permissions on configuration files
+
+---
+
+For more detailed configuration examples, see the `config/domains/` directory for domain-specific configurations.

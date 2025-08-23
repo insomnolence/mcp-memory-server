@@ -1,8 +1,8 @@
 # MCP Memory Server - Architecture Overview
 
-## 🏗️ System Architecture
+## System Architecture
 
-The MCP Memory Server implements a **hierarchical memory system** with **domain-specific configuration**, designed for intelligent content management and retrieval.
+The MCP Memory Server implements a hierarchical memory system with domain-specific configuration, designed for intelligent content management and retrieval.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -20,304 +20,217 @@ The MCP Memory Server implements a **hierarchical memory system** with **domain-
 │              Hierarchical Memory System                │
 │  ┌─────────────────────────────────────────────────────┐ │
 │  │                Memory Tiers                         │ │
-│  │  ┌──────────┬──────────┬──────────┬─────────────┐   │ │
-│  │  │Short-term│Long-term │Permanent │Consolidated │   │ │
-│  │  │   (TTL)  │ (Important)│(Critical)│ (Summaries)│   │ │
-│  │  └──────────┴──────────┴──────────┴─────────────┘   │ │
+│  │  ┌──────────┬──────────┬──────────────────────────┐ │ │
+│  │  │Short-term│Long-term │      Permanent           │ │ │
+│  │  │   (TTL)  │(Important)│     (Critical)           │ │ │
+│  │  └──────────┴──────────┴──────────────────────────┘ │ │
 │  └─────────────────────────────────────────────────────┘ │
 ├─────────────────────────────────────────────────────────┤
 │             Importance Scoring Engine                  │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │  Domain Patterns → Content Analysis → Score        │ │
-│  │     (Keywords)        (Code/Error)      (0-1)       │ │
+│  │  Semantic Analysis + Recency + Frequency + Domain  │ │
 │  └─────────────────────────────────────────────────────┘ │
 ├─────────────────────────────────────────────────────────┤
-│             Lifecycle Management System                │
+│              Deduplication System                      │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │     TTL Engine + Memory Aging + Maintenance        │ │
-│  │   (Time decay)   (Score decay)   (Cleanup/Stats)   │ │
+│  │  Similarity Detection + Content Merging + Analytics│ │
 │  └─────────────────────────────────────────────────────┘ │
 ├─────────────────────────────────────────────────────────┤
-│              Vector Database Layer                     │
+│                ChromaDB Storage                        │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │          ChromaDB + HuggingFace Embeddings          │ │
-│  │   Semantic Search + Cross-Encoder Reranking        │ │
+│  │       Vector Embeddings + Metadata + Indices       │ │
 │  └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 🧠 Memory Hierarchy
+## Core Components
 
-### 4-Tier Memory System
+### 1. FastAPI Server Layer
+- **JSON-RPC Protocol**: MCP-compliant communication
+- **Tool Registry**: Dynamic MCP tool registration and routing  
+- **Request Handling**: Async request processing with proper error handling
+- **Health Monitoring**: Built-in health checks and status reporting
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Memory Tiers                        │
-├─────────────────────────────────────────────────────────┤
-│ 🔄 Short-term Memory                                   │
-│    • Recent interactions                               │
-│    • Auto-pruning (TTL: 5min - 1 week)               │
-│    • Importance: 0.0 - 0.7                           │
-├─────────────────────────────────────────────────────────┤
-│ 💾 Long-term Memory                                    │
-│    • Important persistent knowledge                    │
-│    • TTL: 1 week + jitter                            │
-│    • Importance: 0.7 - 0.95                          │
-├─────────────────────────────────────────────────────────┤
-│ 💎 Permanent Memory                                    │
-│    • Critical knowledge (never expires)               │
-│    • Importance: ≥ 0.95                               │
-│    • User-flagged or auto-promoted                    │
-├─────────────────────────────────────────────────────────┤
-│ 📦 Consolidated Memory                                 │
-│    • Compressed summaries of related content          │
-│    • Reduces redundancy                               │
-│    • Generated by clustering + summarization          │
-└─────────────────────────────────────────────────────────┘
-```
+### 2. Hierarchical Memory System
+Central component managing three memory tiers:
 
-## ⚡ Content Flow
+#### Short-term Memory
+- **Purpose**: Recent interactions and temporary context
+- **Storage**: ChromaDB collection with TTL metadata
+- **Lifecycle**: Automatic expiration based on importance and age
+- **Capacity**: Configurable (default: ~100 documents)
 
-### Document Addition Flow
-```
-User Content
-     ↓
-┌─────────────────────────────────────────┐
-│          Domain Scoring Engine          │
-│  ┌─────────────────────────────────────┐ │
-│  │  Domain Pattern Matching           │ │
-│  │  (Keywords, Regex, Bonuses)        │ │
-│  └─────────────────────────────────────┘ │
-│  ┌─────────────────────────────────────┐ │
-│  │  Content Analysis                   │ │
-│  │  (Code, Errors, Length, Language)  │ │
-│  └─────────────────────────────────────┘ │
-│  ┌─────────────────────────────────────┐ │
-│  │  Context Evaluation                 │ │
-│  │  (User flags, Solution markers)    │ │
-│  └─────────────────────────────────────┘ │
-│           ↓ Final Score (0-1)            │
-└─────────────────────────────────────────┘
-     ↓
-┌─────────────────────────────────────────┐
-│          Collection Routing            │
-│  Score ≥ 0.95 → Permanent Memory       │
-│  Score ≥ 0.70 → Long-term Memory       │
-│  Score < 0.70 → Short-term Memory      │
-└─────────────────────────────────────────┘
-     ↓
-┌─────────────────────────────────────────┐
-│         Vector Database Storage         │
-│  • Generate embeddings                  │
-│  • Store with metadata                  │  
-│  • Set TTL based on tier               │
-└─────────────────────────────────────────┘
-```
+#### Long-term Memory  
+- **Purpose**: Important information for extended retention
+- **Criteria**: Documents with importance score ≥ 0.7
+- **Storage**: Persistent ChromaDB collection
+- **Lifecycle**: TTL-based with importance-weighted aging
 
-### Query Flow
-```
-User Query
-     ↓
-┌─────────────────────────────────────────┐
-│          Multi-Collection Search        │
-│  • Query all relevant collections      │
-│  • Semantic similarity search          │
-│  • Apply collection-specific filters   │
-└─────────────────────────────────────────┘
-     ↓
-┌─────────────────────────────────────────┐
-│          Dynamic Scoring               │
-│  • Semantic similarity (40%)           │
-│  • Recency factor (30%)               │
-│  • Access frequency (20%)             │
-│  • Importance score (10%)             │
-└─────────────────────────────────────────┘
-     ↓
-┌─────────────────────────────────────────┐
-│          Cross-Encoder Reranking       │
-│  • Query-document pair scoring         │
-│  • Improved relevance ranking          │
-│  • Final result ordering              │
-└─────────────────────────────────────────┘
-     ↓
-    Results
-```
+#### Permanent Memory
+- **Purpose**: Critical knowledge preserved indefinitely  
+- **Criteria**: Documents with importance score ≥ 0.95 or explicit permanence flags
+- **Storage**: Persistent ChromaDB collection with permanence metadata
+- **Lifecycle**: No automatic expiration
 
-## 🎯 Universal Domain System
+### 3. Importance Scoring Engine
+Multi-factor scoring algorithm:
 
-### Pattern Engine Architecture
-```
-┌─────────────────────────────────────────────────────────┐
-│                Domain Configuration                     │
-├─────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │                Pattern Definitions                  │ │
-│  │  business-development.json                          │ │
-│  │  ├─ revenue_opportunities: ["revenue", "profit"]   │ │
-│  │  ├─ market_intelligence: ["competitor", "analysis"] │ │
-│  │  └─ client_relationship: ["client", "partnership"] │ │
-│  └─────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │              Pattern Matching Engine                │ │
-│  │  • Keyword detection (case-insensitive)            │ │
-│  │  • Regex pattern support                           │ │
-│  │  • Match modes: any/all/weighted                   │ │
-│  │  • Bonus score calculation                         │ │
-│  └─────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │             Permanence Triggers                     │ │
-│  │  • Auto-promotion keywords                         │ │
-│  │  • Importance boost calculation                    │ │
-│  │  • Critical content detection                      │ │
-│  └─────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Domain Examples
-- **Software Development**: Code, bugs, architecture, APIs
-- **Business Development**: Revenue, deals, KPIs, markets
-- **Research**: Methodology, findings, evidence, hypotheses
-- **Creative Writing**: Characters, plot, dialogue, themes
-- **Cooking**: Recipes, techniques, ingredients, innovations
-- **Personal**: Extensible for any personal use case
-
-## ⏰ Lifecycle Management
-
-### TTL (Time-To-Live) System
-```
-┌─────────────────────────────────────────────────────────┐
-│                    TTL Tiers                           │
-├─────────────────────────────────────────────────────────┤
-│  High Frequency    │ 5 min ± 1 min   │ Rapid iterations│
-│  Medium Frequency  │ 1 hr ± 10 min   │ Session data    │
-│  Low Frequency     │ 1 day ± 2 hrs   │ Daily insights  │
-│  Static           │ 1 week ± 1 day   │ Important data  │
-│  Permanent        │ ∞ (never)        │ Critical data   │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Memory Aging Process
-```
-Document Creation
-     ↓
-Initial Importance Score
-     ↓ (time passes)
-┌─────────────────────────────────────────┐
-│          Aging Calculation             │
-│  new_score = original_score *           │
-│    exp(-decay_rate * age_in_days)       │
-└─────────────────────────────────────────┘
-     ↓
-Score Below Threshold?
-     ↓ (yes)
-TTL Expiration → Cleanup
-     ↓ (no)
-Remain in Memory
-```
-
-### Background Maintenance
-```
-┌─────────────────────────────────────────────────────────┐
-│              Maintenance Scheduler                     │
-├─────────────────────────────────────────────────────────┤
-│  Every Hour     │ Cleanup expired documents             │
-│  Every 6 Hours  │ Consolidate related memories          │
-│  Every 24 Hours │ Generate system statistics            │
-│  Every Week     │ Deep maintenance and optimization     │
-└─────────────────────────────────────────────────────────┘
-```
-
-## 🔧 Configuration Architecture
-
-### Separation of Concerns
-```
-┌─────────────────────────────────────────────────────────┐
-│                 Domain Configs                         │
-│              (WHAT you use it for)                     │
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │  • Content scoring patterns                        │ │
-│  │  • Domain-specific keywords                        │ │
-│  │  • Permanence triggers                             │ │
-│  │  • Industry/use-case specific logic               │ │
-│  └─────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-                           +
-┌─────────────────────────────────────────────────────────┐
-│              Environment Configs                       │
-│              (WHERE you run it)                        │
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │  • Database paths and settings                     │ │
-│  │  • Server host/port configuration                 │ │
-│  │  • Logging levels and outputs                     │ │
-│  │  • Performance and resource settings              │ │
-│  └─────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────┐
-│                 Merged Configuration                   │
-│              (Runtime configuration)                   │
-└─────────────────────────────────────────────────────────┘
-```
-
-## 🛠️ Component Interactions
-
-### Tool Registry Pattern
 ```python
-# Dependency injection for clean architecture
-tool_registry = {
-    "add_document": partial(add_document_tool, memory_system),
-    "query_documents": partial(query_documents_tool, memory_system),
-    "get_memory_stats": partial(get_memory_stats_tool, memory_system),
-    # ... more tools
+importance_score = (
+    semantic_weight * semantic_score +      # 40% - Content analysis
+    recency_weight * recency_score +        # 30% - Time-based decay  
+    frequency_weight * frequency_score +    # 20% - Access patterns
+    domain_weight * domain_score            # 10% - Domain keywords
+)
+```
+
+#### Semantic Analysis
+- **HuggingFace Embeddings**: sentence-transformers/all-MiniLM-L6-v2
+- **Content Length**: Normalized scoring for document length
+- **Keyword Matching**: Domain-specific pattern recognition
+
+#### Recency Weighting
+- **Exponential Decay**: Recent documents score higher
+- **Configurable Decay**: Domain-specific decay constants
+- **Access-based Refresh**: Score boost on retrieval
+
+#### Frequency Analysis
+- **Access Count**: Track document retrieval frequency
+- **Usage Patterns**: Identify frequently referenced content
+- **Temporal Analysis**: Recent access patterns weighted higher
+
+### 4. Deduplication System
+Advanced duplicate detection and content merging:
+
+#### Similarity Detection
+- **Embedding Comparison**: Cosine similarity on document vectors
+- **Configurable Thresholds**: Domain-aware similarity requirements
+- **Batch Processing**: Efficient processing of document collections
+
+#### Content Merging
+- **Importance Preservation**: Keep higher-importance versions
+- **Metadata Combination**: Merge access counts and metadata
+- **Relationship Tracking**: Maintain document relationships
+
+#### Domain Awareness
+- **Content Type Detection**: Different thresholds for code, text, data
+- **Keyword Classification**: Automatic content categorization
+- **Adaptive Thresholds**: Dynamic similarity requirements
+
+### 5. Lifecycle Management
+Automated document lifecycle with TTL system:
+
+#### TTL Calculation
+```python
+ttl = base_ttl + jitter + importance_modifier + access_modifier
+```
+
+#### Tier Assignment
+- **High Frequency**: Documents accessed multiple times recently
+- **Medium Frequency**: Moderately accessed content
+- **Low Frequency**: Rarely accessed content  
+- **Static**: Content marked for long-term retention
+
+#### Background Maintenance
+- **Cleanup Processes**: Automated expired document removal
+- **Health Monitoring**: System health assessment and reporting
+- **Performance Tracking**: Lifecycle effectiveness metrics
+
+### 6. Storage Layer (ChromaDB)
+Vector database with metadata support:
+
+#### Collections
+- `short_term_memory`: Recent interactions
+- `long_term_memory`: Important persistent content
+- `permanent_memory`: Critical preserved knowledge
+
+#### Indexing
+- **Vector Indices**: Efficient similarity search
+- **Metadata Indices**: Fast filtering and retrieval
+- **Composite Queries**: Complex search capabilities
+
+## Data Flow
+
+### Document Ingestion
+1. **Content Analysis**: Extract text and metadata
+2. **Importance Scoring**: Calculate multi-factor score
+3. **Deduplication Check**: Detect similar existing content
+4. **Tier Assignment**: Route to appropriate memory tier
+5. **Storage**: Store in ChromaDB with metadata
+6. **Relationship Tracking**: Update document relationships
+
+### Document Retrieval
+1. **Query Processing**: Parse search parameters
+2. **Multi-tier Search**: Search across relevant collections
+3. **Similarity Ranking**: Vector-based relevance scoring
+4. **Reranking**: Apply cross-encoder for precision
+5. **Access Tracking**: Update access counts and patterns
+6. **Response Assembly**: Format results for MCP protocol
+
+### Maintenance Operations
+1. **TTL Processing**: Identify expired documents
+2. **Cleanup Execution**: Remove expired content
+3. **Deduplication**: Periodic similarity analysis
+4. **Health Assessment**: System performance evaluation
+5. **Statistics Update**: Maintain system metrics
+
+## Configuration Architecture
+
+### Hierarchical Configuration
+- **Base Configuration**: Core system settings
+- **Domain Overrides**: Domain-specific customizations
+- **Environment Variables**: Runtime configuration options
+
+### Domain Patterns
+```json
+{
+  "domain_patterns": {
+    "patterns": {
+      "technical_content": {
+        "keywords": ["function", "error", "implementation"],
+        "bonus": 0.3,
+        "match_mode": "any"
+      }
+    }
+  }
 }
 ```
 
-### Memory System Interface
-```python
-class HierarchicalMemorySystem:
-    def __init__(self, db_config, embeddings_config, memory_config, scoring_config):
-        self.short_term_memory = ChromaCollection("short_term")
-        self.long_term_memory = ChromaCollection("long_term") 
-        self.permanent_memory = ChromaCollection("permanent")
-        self.consolidated_memory = ChromaCollection("consolidated")
-        self.scorer = MemoryImportanceScorer(scoring_config)
-        self.lifecycle_manager = LifecycleManager()
-```
+## Performance Characteristics
 
-## 📊 Performance Characteristics
+### Scalability
+- **Async Processing**: Non-blocking operation handling
+- **Batch Operations**: Efficient bulk processing
+- **Memory Management**: Controlled resource usage
+- **Query Optimization**: Indexed searches and caching
 
-### Scalability Design
-- **Horizontal Scaling**: Multiple server instances with different domains
-- **Vertical Scaling**: Efficient memory management with TTL and consolidation
-- **Data Partitioning**: Domain-specific databases and collections
-- **Caching Strategy**: In-memory scoring cache and embedding cache
+### Reliability
+- **Error Handling**: Comprehensive exception management
+- **Health Monitoring**: Continuous system health assessment  
+- **Graceful Degradation**: Fallback mechanisms for component failures
+- **Data Integrity**: Consistent state management
 
-### Memory Efficiency
-- **TTL-based Cleanup**: Automatic removal of outdated content
-- **Consolidation**: Merge similar documents to reduce redundancy
-- **Importance-based Retention**: Keep only valuable content long-term
-- **Lazy Loading**: Load embeddings and models on demand
+### Monitoring
+- **Performance Metrics**: Query latency and throughput
+- **Resource Usage**: Memory and storage monitoring
+- **System Health**: Component status and availability
+- **Analytics**: Usage patterns and effectiveness metrics
 
-### Query Performance
-- **Multi-factor Scoring**: Balanced relevance calculation
-- **Cross-encoder Reranking**: Improved result quality
-- **Collection Targeting**: Search only relevant memory tiers
-- **Embedding Caching**: Reuse computed vectors
+## Extension Points
 
-## 🔒 Security & Reliability
+### Custom Tools
+- **Tool Registration**: Dynamic MCP tool addition
+- **Parameter Validation**: Automatic request validation
+- **Response Formatting**: Consistent MCP response structure
 
-### Data Protection
-- **Local Storage**: All data stored locally (no external dependencies)
-- **Configuration Validation**: Prevent invalid configurations
-- **Error Handling**: Graceful degradation on failures
-- **Backup Support**: Easy data backup and restoration
+### Custom Scorers
+- **Pluggable Scoring**: Custom importance algorithms
+- **Domain-specific Logic**: Specialized scoring functions
+- **Composite Scoring**: Multiple scoring strategy combination
 
-### System Reliability
-- **Fallback Defaults**: System works without configuration
-- **Data Migration**: Smooth transitions between system versions
-- **Health Monitoring**: Built-in statistics and health checks
-- **Logging**: Comprehensive logging for debugging and monitoring
+### Storage Backends
+- **Database Abstraction**: Pluggable storage implementations
+- **Migration Support**: Data migration between storage systems
+- **Backup Integration**: Automated backup and restoration
 
-The architecture is designed for **flexibility**, **performance**, and **ease of use** while maintaining **professional standards** and **scalability**.
+This architecture provides a robust foundation for intelligent memory management while maintaining flexibility for domain-specific customization and future enhancements.

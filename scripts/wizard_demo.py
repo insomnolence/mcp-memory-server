@@ -163,20 +163,20 @@ def demo_professional_features():
     ui.print_section("Professional Features")
     
     features = [
-        ("🎨 Professional UI", "ANSI colors, progress bars, clear formatting"),
-        ("🔧 Configuration Validation", "Comprehensive validation with clear error messages"),
-        ("👀 Preview System", "Human-readable impact explanations before saving"),
-        ("💾 Backup Handling", "Automatic backup of existing configurations"),
-        ("📊 Progress Tracking", "Visual progress through question flow"),
-        ("🛠️ Template System", "Quick setup with professionally optimized templates"),
-        ("🔀 Dependency Management", "Smart question flow based on previous answers"),
-        ("📝 Help System", "Contextual help and impact explanations"),
-        ("⚡ Multiple Modes", "Full wizard or quick template setup"),
-        ("🔍 Error Recovery", "Graceful handling of user errors and interruptions")
+        ("Professional UI", "ANSI colors, progress bars, clear formatting"),
+        ("Configuration Validation", "Comprehensive validation with clear error messages"),
+        ("Preview System", "Human-readable impact explanations before saving"),
+        ("Backup Handling", "Automatic backup of existing configurations"),
+        ("Progress Tracking", "Visual progress through question flow"),
+        ("Template System", "Quick setup with professionally optimized templates"),
+        ("Dependency Management", "Smart question flow based on previous answers"),
+        ("Help System", "Contextual help and impact explanations"),
+        ("Multiple Modes", "Full wizard or quick template setup"),
+        ("Error Recovery", "Graceful handling of user errors and interruptions")
     ]
     
     for feature, description in features:
-        print(f"{feature} {ui._colorize(feature.split(' ', 1)[1], Colors.BOLD)}")
+        print(f"{ui._colorize(feature, Colors.BOLD)}")
         print(f"    {description}")
         print()
     
@@ -211,7 +211,7 @@ def main():
     print("All settings include validation, backup handling, and clear explanations.")
     print()
     
-    ui.print_success("Enhanced Configuration Wizard is ready to use! 🚀")
+    ui.print_success("Enhanced Configuration Wizard is ready to use!")
 
 
 if __name__ == "__main__":

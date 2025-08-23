@@ -6,6 +6,7 @@ This script starts the MCP server using configuration from config.json
 """
 
 import sys
+import os
 import uvicorn
 from pathlib import Path
 
@@ -17,19 +18,41 @@ from mcp_memory_server.config import Config
 
 def main():
     """Start the refactored MCP server with configuration"""
-    config = Config()
+    # Check for help flag
+    if len(sys.argv) > 1 and sys.argv[1] in ['-h', '--help', 'help']:
+        print("MCP Memory Server - Start Script")
+        print()
+        print("Usage:")
+        print("  python scripts/start_server.py                    # Start with config.json")
+        print("  MCP_CONFIG_FILE=custom.json python scripts/start_server.py")
+        print("  MCP_DOMAIN=business-development python scripts/start_server.py")
+        print()
+        print("Environment Variables:")
+        print("  MCP_CONFIG_FILE    Path to configuration file")
+        print("  MCP_DOMAIN         Domain-specific configuration to use")
+        print()
+        print("Available domains: business-development, research, creative-writing, cooking")
+        return
+    
+    # Support environment variables for configuration
+    config_file = os.environ.get('MCP_CONFIG_FILE')
+    domain = os.environ.get('MCP_DOMAIN')
+    
+    config = Config(config_path=config_file, domain=domain)
     server_config = config.get_server_config()
     
     host = server_config.get('host', '127.0.0.1')
     port = server_config.get('port', 8080)
     
-    print(f"🚀 Starting Enhanced MCP Memory Server (Refactored)")
-    print(f"📊 Configuration loaded from: {config.config_path}")
-    print(f"🗄️  Database location: {config.get('database', 'persist_directory')}")
-    print(f"🧠 Embedding model: {config.get('embeddings', 'model_name')}")
-    print(f"🏃 Server starting on: http://{host}:{port}")
-    print(f"📝 Logs will be written to: {config.get('logging', 'file', default='mcp_server.log')}")
-    print("🏗️  Architecture: Modular (config, memory, tools, server)")
+    print(f"Starting Enhanced MCP Memory Server")
+    print(f"Configuration loaded from: {config.config_path}")
+    if domain:
+        print(f"Domain configuration: {domain}")
+    print(f"Database location: {config.get('database', 'persist_directory')}")
+    print(f"Embedding model: {config.get('embeddings', 'model_name')}")
+    print(f"Server starting on: http://{host}:{port}")
+    print(f"Logs will be written to: {config.get('logging', 'file', default='mcp_server.log')}")
+    print("Architecture: Modular (config, memory, tools, server)")
     print("=" * 60)
     
     # Start the server

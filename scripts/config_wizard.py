@@ -262,7 +262,7 @@ class EnhancedConfigWizard:
         print("• Reconfigure anytime: python3 scripts/config_wizard.py")
         print()
         
-        self.ui.print_success("Happy memory management! 🧠")
+        self.ui.print_success("Happy memory management!")
     
     def _get_server_config(self) -> Dict[str, Any]:
         """Get server configuration for display."""

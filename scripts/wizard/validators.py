@@ -213,10 +213,9 @@ class ConfigPreview:
         # Collection sizes
         mgmt = config.get("memory_management", {})
         short_term_size = mgmt.get("short_term_max_size", 100)
-        consolidation_threshold = mgmt.get("consolidation_threshold", 50)
         
         storage["capacity"] = f"Up to {short_term_size} items in active memory"
-        storage["consolidation"] = f"Memories consolidated when short-term reaches {consolidation_threshold} items"
+        storage["management"] = f"Automatic cleanup and aging based on importance scores"
         
         # Persistence directory
         persist_dir = config.get("database", {}).get("persist_directory", "./data/memory")
@@ -232,11 +231,9 @@ class ConfigPreview:
         mgmt = config.get("memory_management", {})
         
         cleanup_hours = maint.get("cleanup_interval_hours", 1)
-        consolidation_hours = maint.get("consolidation_interval_hours", 6)
         stats_hours = maint.get("statistics_interval_hours", 24)
         
         schedule["cleanup"] = f"Memory cleanup every {cleanup_hours} hours"
-        schedule["consolidation"] = f"Memory consolidation every {consolidation_hours} hours"
         schedule["statistics"] = f"Statistics update every {stats_hours} hours"
         
         return schedule
@@ -255,7 +252,7 @@ class ConfigPreview:
         elif use_case == "research":
             examples["scenario_1"] = "Important research findings will be retained for extended periods"
             examples["scenario_2"] = "Documentation and explanations will receive importance bonuses"
-            examples["scenario_3"] = "Related research papers will be consolidated into summaries"
+            examples["scenario_3"] = "Research papers will be preserved for extended periods with high importance scores"
         
         elif use_case == "creative":
             examples["scenario_1"] = "Recent creative ideas will be weighted heavily in search results"
@@ -270,7 +267,7 @@ class ConfigPreview:
         else:  # general
             examples["scenario_1"] = "Important content will be automatically identified and prioritized"
             examples["scenario_2"] = "Frequently accessed information will build up importance scores"
-            examples["scenario_3"] = "Related memories will be consolidated to save space"
+            examples["scenario_3"] = "Important content will be identified and preserved automatically"
         
         return examples
 

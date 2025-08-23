@@ -96,9 +96,7 @@
   },
   "memory_management": {
     "short_term_max_size": 100,
-    "consolidation_threshold": 50,
     "maintenance_interval_hours": 1,
-    "consolidation_interval_hours": 6,
     "stats_interval_hours": 24
   },
   "lifecycle": {
@@ -121,7 +119,6 @@
     "maintenance": {
       "enabled": true,
       "cleanup_interval_hours": 1,
-      "consolidation_interval_hours": 6,
       "statistics_interval_hours": 24,
       "deep_maintenance_interval_hours": 168
     }
