@@ -2,7 +2,7 @@ import logging
 from typing import Dict, Any, Optional, List
 
 
-def query_documents_tool(memory_system, query: str, collections: str = None, k: int = 5, use_reranker: bool = True, reranker_model=None) -> dict:
+async def query_documents_tool(memory_system, query: str, collections: str = None, k: int = 5, use_reranker: bool = True, reranker_model=None) -> dict:
     """Query documents from the hierarchical memory system with intelligent scoring.
     
     Args:
@@ -24,11 +24,11 @@ def query_documents_tool(memory_system, query: str, collections: str = None, k: 
             collection_list = None
         
         # Query using hierarchical memory system
-        result = memory_system.query_memories(query, collection_list, k)
+        result = await memory_system.query_memories(query, collection_list, k)
         
         # Apply reranking if requested and we have multiple results
         if use_reranker and len(result["content"]) > 1:
-            result = apply_reranking(query, result, reranker_model)
+            result = await apply_reranking(query, result, reranker_model)
         
         # Transform to MCP-compliant format
         mcp_result = {
@@ -79,7 +79,7 @@ def query_documents_tool(memory_system, query: str, collections: str = None, k: 
         raise Exception(f"Failed to query documents: {str(e)}")
 
 
-def apply_reranking(query: str, result: dict, reranker_model=None) -> dict:
+async def apply_reranking(query: str, result: dict, reranker_model=None) -> dict:
     """Apply cross-encoder reranking to improve result quality.
     
     Args:
@@ -117,7 +117,8 @@ def apply_reranking(query: str, result: dict, reranker_model=None) -> dict:
         
         # Apply reranking
         query_doc_pairs = [(query, doc_text) for doc_text in doc_texts]
-        reranker_scores = reranker_model.predict(query_doc_pairs)
+        import asyncio
+        reranker_scores = await asyncio.to_thread(reranker_model.predict, query_doc_pairs)
         
         # Combine with original scores and reorder
         scored_blocks = list(zip(content_blocks, reranker_scores))

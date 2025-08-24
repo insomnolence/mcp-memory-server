@@ -106,7 +106,7 @@ class HierarchicalMemorySystem:
             temp_collection = (self.long_term_memory if importance > self.short_term_threshold 
                              else self.short_term_memory)
             
-            action, existing_doc, similarity = self.deduplicator.check_ingestion_duplicates(
+            action, existing_doc, similarity = await self.deduplicator.check_ingestion_duplicates(
                 content, metadata, temp_collection
             )
             
@@ -172,7 +172,7 @@ class HierarchicalMemorySystem:
         filtered_metadata = self._filter_complex_metadata(enhanced_metadata)
         
         # Create documents with enhanced relationship tracking
-        documents = self.chunk_manager.create_document_with_relationships(
+        documents = await self.chunk_manager.create_document_with_relationships(
             content=content,
             metadata=filtered_metadata,
             chunks=chunks,
@@ -213,7 +213,7 @@ class HierarchicalMemorySystem:
                 "error": str(db_error)
             }
     
-    def query_memories(self, query: str, collections: List[str] = None, k: int = 5, use_smart_routing: bool = True) -> dict:
+    async def query_memories(self, query: str, collections: List[str] = None, k: int = 5, use_smart_routing: bool = True) -> dict:
         """Query across memory collections with deduplication-aware intelligent routing.
         
         Args:
@@ -251,7 +251,7 @@ class HierarchicalMemorySystem:
             search_k = max(collection_k * 2, 10)  # Get extra candidates for better ranking
                 
             try:
-                initial_docs = collection.similarity_search_with_score(query, k=search_k)
+                initial_docs = await asyncio.to_thread(collection.similarity_search_with_score, query, k=search_k)
                 
                 for doc, distance in initial_docs:
                     memory_data = {
@@ -295,7 +295,7 @@ class HierarchicalMemorySystem:
             chunk_id = result['metadata'].get('chunk_id')
             if chunk_id and hasattr(self, 'chunk_manager'):
                 try:
-                    related_chunks = self.chunk_manager.retrieve_related_chunks(chunk_id, k_related=2)
+                    related_chunks = await asyncio.to_thread(self.chunk_manager.retrieve_related_chunks, chunk_id, k_related=2)
                     if related_chunks:
                         related_chunks_included += len(related_chunks)
                 except Exception as e:

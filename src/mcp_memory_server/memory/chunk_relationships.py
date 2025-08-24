@@ -6,6 +6,7 @@ Enables context-aware retrieval that understands merged documents and related ch
 """
 
 import time
+import asyncio
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from langchain_core.documents import Document
@@ -46,7 +47,7 @@ class ChunkRelationshipManager:
             'co_occurrence_window': 3
         }
     
-    def create_document_with_relationships(self, content: str, metadata: dict, 
+    async def create_document_with_relationships(self, content: str, metadata: dict, 
                                          chunks: List[str], memory_id: str, 
                                          collection_name: str) -> List[Document]:
         """Create documents with enhanced relationship tracking.
@@ -148,7 +149,7 @@ class ChunkRelationshipManager:
         # Find and establish semantic relationships with existing documents
         if self.config['enable_related_retrieval']:
             try:
-                self._establish_semantic_relationships(memory_id, content, documents)
+                await self._establish_semantic_relationships(memory_id, content, documents)
             except Exception as e:
                 logging.warning(f"Failed to establish semantic relationships for {memory_id}: {e}")
         
@@ -163,12 +164,12 @@ class ChunkRelationshipManager:
         else:
             return content[:200] + '...' if len(content) > 200 else content
     
-    def _establish_semantic_relationships(self, new_document_id: str, content: str, 
+    async def _establish_semantic_relationships(self, new_document_id: str, content: str, 
                                         new_documents: List[Document]):
         """Find and establish relationships with semantically similar documents."""
         try:
             # Use the memory system to find similar documents
-            similar_results = self.memory_system.query_memories(
+            similar_results = await self.memory_system.query_memories(
                 content[:500],  # Use first part of content for similarity search
                 k=5,
                 use_smart_routing=False  # Direct search for relationship building

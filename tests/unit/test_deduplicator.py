@@ -105,17 +105,19 @@ class TestSimilarityCalculator:
 
 class TestMemoryDeduplicator:
 
-    def test_check_ingestion_duplicates_no_duplicates(self, memory_deduplicator):
+    @pytest.mark.asyncio
+    async def test_check_ingestion_duplicates_no_duplicates(self, memory_deduplicator):
         mock_collection = Mock()
         mock_collection.similarity_search.return_value = []
-        action, existing_doc, similarity = memory_deduplicator.check_ingestion_duplicates(
+        action, existing_doc, similarity = await memory_deduplicator.check_ingestion_duplicates(
             "new unique content", {'chunk_id': 'new_id'}, mock_collection
         )
         assert action == 'add_new'
         assert existing_doc is None
         assert similarity == 0.0
 
-    def test_check_ingestion_duplicates_boost_existing(self, memory_deduplicator, mock_embedding_model):
+    @pytest.mark.asyncio
+    async def test_check_ingestion_duplicates_boost_existing(self, memory_deduplicator, mock_embedding_model):
         mock_collection = Mock()
         # Mock a candidate that is very similar
         candidate_doc = Mock()
@@ -125,7 +127,7 @@ class TestMemoryDeduplicator:
 
         # Mock the internal _simple_content_similarity to return a high score
         with patch.object(memory_deduplicator, '_simple_content_similarity', return_value=0.98):
-            action, existing_doc, similarity = memory_deduplicator.check_ingestion_duplicates(
+            action, existing_doc, similarity = await memory_deduplicator.check_ingestion_duplicates(
                 "new similar content", {'chunk_id': 'new_id'}, mock_collection
             )
             assert action == 'boost_existing'
@@ -133,13 +135,15 @@ class TestMemoryDeduplicator:
             assert existing_doc['id'] == 'existing_id'
             assert similarity == pytest.approx(0.98)
 
-    def test_deduplicate_collection_no_docs(self, memory_deduplicator):
+    @pytest.mark.asyncio
+    async def test_deduplicate_collection_no_docs(self, memory_deduplicator):
         mock_collection = Mock()
         mock_collection.similarity_search.return_value = []
-        results = memory_deduplicator.deduplicate_collection(mock_collection)
+        results = await memory_deduplicator.deduplicate_collection(mock_collection)
         assert results['message'] == 'Not enough documents for deduplication'
 
-    def test_deduplicate_collection_no_duplicates_found(self, memory_deduplicator, mock_embedding_model):
+    @pytest.mark.asyncio
+    async def test_deduplicate_collection_no_duplicates_found(self, memory_deduplicator, mock_embedding_model):
         mock_collection = Mock()
         docs = [
             Mock(page_content='doc1', metadata={'chunk_id': '1'}),
@@ -149,11 +153,12 @@ class TestMemoryDeduplicator:
 
         # Ensure _find_duplicates_advanced returns no duplicates
         with patch.object(memory_deduplicator, '_find_duplicates_advanced', return_value=[]):
-            results = memory_deduplicator.deduplicate_collection(mock_collection)
+            results = await memory_deduplicator.deduplicate_collection(mock_collection)
             assert results['message'] == 'No duplicates found'
             assert results['duplicates_found'] == 0
 
-    def test_deduplicate_collection_with_duplicates_dry_run(self, memory_deduplicator, mock_embedding_model):
+    @pytest.mark.asyncio
+    async def test_deduplicate_collection_with_duplicates_dry_run(self, memory_deduplicator, mock_embedding_model):
         mock_collection = Mock()
         doc1 = Mock(page_content='apple', metadata={'chunk_id': '1'})
         doc2 = Mock(page_content='apple_similar', metadata={'chunk_id': '2'})
@@ -162,13 +167,14 @@ class TestMemoryDeduplicator:
         # Mock _find_duplicates_advanced to return a duplicate pair
         mock_duplicate_pair = ({'id': '1', 'page_content': 'apple'}, {'id': '2', 'page_content': 'apple_similar'}, 0.95)
         with patch.object(memory_deduplicator, '_find_duplicates_advanced', return_value=[mock_duplicate_pair]):
-            results = memory_deduplicator.deduplicate_collection(mock_collection, dry_run=True)
+            results = await memory_deduplicator.deduplicate_collection(mock_collection, dry_run=True)
             assert results['duplicates_found'] == 1
             assert results['message'].startswith('DRY RUN')
             assert len(results['duplicate_pairs']) == 1
             assert results['duplicate_pairs'][0]['doc1_id'] == '1'
 
-    def test_deduplicate_collection_with_duplicates_merge(self, memory_deduplicator, mock_embedding_model):
+    @pytest.mark.asyncio
+    async def test_deduplicate_collection_with_duplicates_merge(self, memory_deduplicator, mock_embedding_model):
         mock_collection = Mock()
         doc1 = Mock(page_content='apple', metadata={'chunk_id': '1'})
         doc2 = Mock(page_content='apple_similar', metadata={'chunk_id': '2'})
@@ -179,7 +185,7 @@ class TestMemoryDeduplicator:
         with patch.object(memory_deduplicator, '_find_duplicates_advanced', return_value=[mock_duplicate_pair]):
             # Mock the document_merger.batch_merge_duplicates
             with patch.object(memory_deduplicator.document_merger, 'batch_merge_duplicates', return_value=[{'id': 'merged_doc'}]) as mock_merge:
-                results = memory_deduplicator.deduplicate_collection(mock_collection, dry_run=False)
+                results = await memory_deduplicator.deduplicate_collection(mock_collection, dry_run=False)
                 assert results['merged_documents'] == 1
                 assert results['message'].startswith('Merged')
                 mock_merge.assert_called_once()

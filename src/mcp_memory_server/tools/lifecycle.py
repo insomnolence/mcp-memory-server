@@ -24,7 +24,7 @@ def get_lifecycle_stats_tool(lifecycle_manager: LifecycleManager) -> Dict[str, A
         return {"success": False, "error": str(e)}
 
 
-def cleanup_expired_memories_tool(lifecycle_manager: LifecycleManager, 
+async def cleanup_expired_memories_tool(lifecycle_manager: LifecycleManager, 
                                 collection: str = None) -> Dict[str, Any]:
     """Clean up expired memories based on TTL.
     
@@ -36,7 +36,7 @@ def cleanup_expired_memories_tool(lifecycle_manager: LifecycleManager,
         Cleanup results and statistics
     """
     try:
-        results = lifecycle_manager.cleanup_expired_documents(collection)
+        results = await lifecycle_manager.cleanup_expired_documents(collection)
         
         return {
             "success": True,
@@ -47,7 +47,7 @@ def cleanup_expired_memories_tool(lifecycle_manager: LifecycleManager,
         return {"success": False, "error": str(e)}
 
 
-def refresh_memory_aging_tool(lifecycle_manager: LifecycleManager,
+async def refresh_memory_aging_tool(lifecycle_manager: LifecycleManager,
                             collection: str = None, sample_size: int = 100) -> Dict[str, Any]:
     """Refresh aging scores for memories that need updating.
     
@@ -60,7 +60,7 @@ def refresh_memory_aging_tool(lifecycle_manager: LifecycleManager,
         Refresh results and statistics
     """
     try:
-        results = lifecycle_manager.refresh_aging_scores(collection, sample_size)
+        results = await lifecycle_manager.refresh_aging_scores(collection, sample_size)
         
         return {
             "success": True,

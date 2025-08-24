@@ -65,7 +65,7 @@ def hierarchical_memory_system(mock_short_term_collection, mock_long_term_collec
                 with patch('src.mcp_memory_server.memory.hierarchical.MemoryDeduplicator', autospec=True) as MockDeduplicator:
                     with patch('src.mcp_memory_server.memory.hierarchical.QueryPerformanceMonitor', autospec=True):
                         with patch('src.mcp_memory_server.memory.hierarchical.MemoryIntelligenceSystem', autospec=True):
-                            with patch('src.mcp_memory_server.memory.hierarchical.ChunkRelationshipManager', autospec=True):
+                            with patch('src.mcp_memory_server.memory.hierarchical.ChunkRelationshipManager', autospec=True) as MockChunkManager:
 
                                 # Configure MockChroma to return different mock collections
                                 def chroma_side_effect(*args, **kwargs):
@@ -90,6 +90,12 @@ def hierarchical_memory_system(mock_short_term_collection, mock_long_term_collec
                                 mock_deduplicator_instance.enabled = deduplication_config['enabled']
                                 mock_deduplicator_instance.check_ingestion_duplicates = Mock(return_value=('add', None, 0.0))
                                 mock_deduplicator_instance.boost_existing_document = Mock(return_value={'updated': True})
+
+                                # Configure MockChunkManager to return AsyncMock for create_document_with_relationships
+                                mock_chunk_manager_instance = MockChunkManager.return_value
+                                mock_chunk_manager_instance.create_document_with_relationships = AsyncMock(
+                                    return_value=[Mock(page_content="test", metadata={"chunk_id": "test_chunk"})]
+                                )
 
                                 hms = HierarchicalMemorySystem(
                                     db_config=db_config,
@@ -167,8 +173,9 @@ async def test_add_memory_handles_db_error(hierarchical_memory_system):
 async def test_add_memory_deduplication_boost_existing(hierarchical_memory_system):
     """Test add_memory with deduplication boosting an existing document."""
     hierarchical_memory_system.deduplicator.enabled = True
-    hierarchical_memory_system.deduplicator.check_ingestion_duplicates.return_value = (
-        'boost_existing', {'metadata': {'chunk_id': 'existing_id'}}, 0.95
+    # Mock as AsyncMock since check_ingestion_duplicates is now async
+    hierarchical_memory_system.deduplicator.check_ingestion_duplicates = AsyncMock(
+        return_value=('boost_existing', {'metadata': {'chunk_id': 'existing_id'}}, 0.95)
     )
     hierarchical_memory_system.deduplicator.boost_existing_document.return_value = {'updated': True}
 
@@ -184,8 +191,9 @@ async def test_add_memory_deduplication_boost_existing(hierarchical_memory_syste
 async def test_add_memory_deduplication_merge_content(hierarchical_memory_system):
     """Test add_memory with deduplication suggesting content merge (and still adding)."""
     hierarchical_memory_system.deduplicator.enabled = True
-    hierarchical_memory_system.deduplicator.check_ingestion_duplicates.return_value = (
-        'merge_content', {'metadata': {'chunk_id': 'existing_id'}}, 0.88
+    # Mock as AsyncMock since check_ingestion_duplicates is now async
+    hierarchical_memory_system.deduplicator.check_ingestion_duplicates = AsyncMock(
+        return_value=('merge_content', {'metadata': {'chunk_id': 'existing_id'}}, 0.88)
     )
 
     result = await hierarchical_memory_system.add_memory("content to merge")
@@ -199,8 +207,9 @@ async def test_add_memory_deduplication_merge_content(hierarchical_memory_system
 async def test_add_memory_deduplication_add_new(hierarchical_memory_system):
     """Test add_memory with deduplication suggesting add_new."""
     hierarchical_memory_system.deduplicator.enabled = True
-    hierarchical_memory_system.deduplicator.check_ingestion_duplicates.return_value = (
-        'add_new', None, 0.0
+    # Mock as AsyncMock since check_ingestion_duplicates is now async
+    hierarchical_memory_system.deduplicator.check_ingestion_duplicates = AsyncMock(
+        return_value=('add_new', None, 0.0)
     )
 
     result = await hierarchical_memory_system.add_memory("truly new content")
@@ -238,13 +247,13 @@ async def test_add_memory_invalid_memory_type(hierarchical_memory_system):
 @pytest.mark.asyncio
 async def test_query_memories_empty_query(hierarchical_memory_system):
     """Test query_memories with an empty query."""
-    result = hierarchical_memory_system.query_memories("")
+    result = await hierarchical_memory_system.query_memories("")
     assert result['content'] == []
     assert result['total_results'] == 0
 
 @pytest.mark.asyncio
 async def test_query_memories_invalid_collection(hierarchical_memory_system):
     """Test query_memories with an invalid collection name."""
-    result = hierarchical_memory_system.query_memories("query", collections=["non_existent_collection"])
+    result = await hierarchical_memory_system.query_memories("query", collections=["non_existent_collection"])
     assert result['content'] == []
     assert result['total_results'] == 0

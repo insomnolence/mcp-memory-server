@@ -1,4 +1,5 @@
 import time
+import asyncio
 import random
 import logging
 import math
@@ -316,7 +317,7 @@ class LifecycleManager:
         
         return metadata
     
-    def cleanup_expired_documents(self, collection_name: str = None) -> Dict[str, Any]:
+    async def cleanup_expired_documents(self, collection_name: str = None) -> Dict[str, Any]:
         """Clean up expired documents from collections.
         
         Args:
@@ -339,7 +340,7 @@ class LifecycleManager:
                 collection = getattr(self.memory_system, f"{coll_name}_memory")
                 
                 # Get all documents with IDs to check for expiry
-                all_data = collection.get()
+                all_data = await asyncio.to_thread(collection.get)
                 total_docs = len(all_data.get('ids', []))
                 
                 expired_doc_ids = []
@@ -352,7 +353,7 @@ class LifecycleManager:
                 cleanup_performed = False
                 if expired_doc_ids:
                     try:
-                        collection.delete(ids=expired_doc_ids)
+                        await asyncio.to_thread(collection.delete, ids=expired_doc_ids)
                         cleanup_performed = True
                         logging.info(f"Deleted {len(expired_doc_ids)} expired documents from {coll_name}")
                     except Exception as delete_error:
@@ -380,7 +381,7 @@ class LifecycleManager:
         
         return results
     
-    def refresh_aging_scores(self, collection_name: str = None, sample_size: int = 100) -> Dict[str, Any]:
+    async def refresh_aging_scores(self, collection_name: str = None, sample_size: int = 100) -> Dict[str, Any]:
         """Refresh aging scores for documents that need it.
         
         Args:
@@ -404,7 +405,7 @@ class LifecycleManager:
                 collection = getattr(self.memory_system, f"{coll_name}_memory")
                 
                 # Get sample of documents
-                docs = collection.similarity_search("", k=sample_size)
+                docs = await asyncio.to_thread(collection.similarity_search, "", k=sample_size)
                 
                 refreshed_count = 0
                 for doc in docs:
@@ -535,8 +536,22 @@ class LifecycleManager:
     def _scheduled_cleanup(self):
         """Scheduled cleanup task."""
         logging.info("Running scheduled cleanup")
-        results = self.cleanup_expired_documents()
-        logging.info(f"Cleanup results: {results['total_expired']} expired out of {results['total_checked']}")
+        try:
+            # Run async cleanup in thread-safe way
+            import asyncio
+            if hasattr(asyncio, 'run'):
+                results = asyncio.run(self.cleanup_expired_documents())
+            else:
+                # Fallback for older Python versions
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    results = loop.run_until_complete(self.cleanup_expired_documents())
+                finally:
+                    loop.close()
+            logging.info(f"Cleanup results: {results['total_expired']} expired out of {results['total_checked']}")
+        except Exception as e:
+            logging.error(f"Error during scheduled cleanup: {e}")
     
     def _scheduled_statistics(self):
         """Scheduled statistics task."""
@@ -547,16 +562,46 @@ class LifecycleManager:
     def _scheduled_aging_refresh(self):
         """Scheduled aging refresh task."""
         logging.info("Running scheduled aging refresh")
-        results = self.refresh_aging_scores()
-        logging.info(f"Aging refresh: {results['total_refreshed']} scores refreshed")
+        try:
+            # Run async aging refresh in thread-safe way
+            import asyncio
+            if hasattr(asyncio, 'run'):
+                results = asyncio.run(self.refresh_aging_scores())
+            else:
+                # Fallback for older Python versions
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    results = loop.run_until_complete(self.refresh_aging_scores())
+                finally:
+                    loop.close()
+            logging.info(f"Aging refresh: {results['total_refreshed']} scores refreshed")
+        except Exception as e:
+            logging.error(f"Error during aging refresh: {e}")
     
     def _scheduled_deep_maintenance(self):
         """Scheduled deep maintenance task."""
         logging.info("Running scheduled deep maintenance")
         
         # Phase 1: Traditional cleanup + aging refresh
-        cleanup = self.cleanup_expired_documents()
-        aging = self.refresh_aging_scores()
+        try:
+            import asyncio
+            if hasattr(asyncio, 'run'):
+                cleanup = asyncio.run(self.cleanup_expired_documents())
+                aging = asyncio.run(self.refresh_aging_scores())
+            else:
+                # Fallback for older Python versions
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    cleanup = loop.run_until_complete(self.cleanup_expired_documents())
+                    aging = loop.run_until_complete(self.refresh_aging_scores())
+                finally:
+                    loop.close()
+        except Exception as e:
+            logging.error(f"Error during deep maintenance async operations: {e}")
+            cleanup = {'total_expired': 0, 'total_checked': 0}
+            aging = {'total_refreshed': 0}
         
         # Phase 2: Progressive cleanup (daily/weekly/monthly phases)
         progressive_result = self.progressive_cleanup.run_scheduled_cleanup()

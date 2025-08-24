@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, AsyncMock, patch
 
 from src.mcp_memory_server.memory.chunk_relationships import ChunkRelationshipManager
 from langchain_core.documents import Document
@@ -11,6 +11,8 @@ def mock_memory_system():
     mock_system.short_term_memory = Mock()
     mock_system.long_term_memory = Mock()
     mock_system.permanent_memory = Mock()
+    # Mock query_memories as async method
+    mock_system.query_memories = AsyncMock(return_value={'content': []})
     return mock_system
 
 # Fixture for ChunkRelationshipManager configuration
@@ -48,14 +50,15 @@ def chunk_relationship_manager(mock_memory_system, chunk_manager_config):
 
 class TestChunkRelationshipManager:
 
-    def test_create_document_with_relationships(self, chunk_relationship_manager):
+    @pytest.mark.asyncio
+    async def test_create_document_with_relationships(self, chunk_relationship_manager):
         content = "This is a test document with multiple sentences. It talks about apples and oranges."
         metadata = {'source': 'test', 'timestamp': 123}
         chunks = ["This is a test document.", "It talks about apples and oranges."]
         memory_id = "mem_123"
         collection_name = "short_term"
 
-        documents = chunk_relationship_manager.create_document_with_relationships(
+        documents = await chunk_relationship_manager.create_document_with_relationships(
             content, metadata, chunks, memory_id, collection_name
         )
 

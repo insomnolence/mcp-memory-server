@@ -99,10 +99,10 @@ def main():
     return app
 
 
-def query_documents_with_reranking(memory_system, reranker_model, query: str, collections: str = None, k: int = 5, use_reranker: bool = True) -> dict:
+async def query_documents_with_reranking(memory_system, reranker_model, query: str, collections: str = None, k: int = 5, use_reranker: bool = True) -> dict:
     """Query documents with reranking support."""
     # Reranking is now handled inside query_documents_tool, so just call it directly
-    return query_documents_tool(memory_system, query, collections, k, use_reranker, reranker_model)
+    return await query_documents_tool(memory_system, query, collections, k, use_reranker, reranker_model)
 
 
 # Global variables for cleanup

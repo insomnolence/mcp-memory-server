@@ -6,6 +6,7 @@ Based on the algorithm from docs/memory-deduplication-proposal.md with enhanceme
 """
 
 import time
+import asyncio
 import logging
 from typing import List, Dict, Any, Tuple, Optional
 from langchain_core.documents import Document
@@ -49,7 +50,7 @@ class MemoryDeduplicator:
         
         logging.info(f"MemoryDeduplicator initialized with threshold {self.similarity_threshold}")
     
-    def check_ingestion_duplicates(self, new_content: str, new_metadata: dict, 
+    async def check_ingestion_duplicates(self, new_content: str, new_metadata: dict, 
                                  collection) -> Tuple[str, Optional[Dict], float]:
         """Check for duplicates during ingestion to prevent storing redundant content.
         
@@ -67,7 +68,7 @@ class MemoryDeduplicator:
             
         try:
             # Quick similarity search to find candidates
-            candidates = collection.similarity_search(new_content, k=5)
+            candidates = await asyncio.to_thread(collection.similarity_search, new_content, k=5)
             
             if not candidates:
                 return 'add_new', None, 0.0
@@ -145,7 +146,7 @@ class MemoryDeduplicator:
         
         return len(intersection) / len(union)
     
-    def deduplicate_collection(self, collection, dry_run: bool = False) -> Dict[str, Any]:
+    async def deduplicate_collection(self, collection, dry_run: bool = False) -> Dict[str, Any]:
         """Perform batch deduplication on a collection.
         
         Main algorithm from docs/memory-deduplication-proposal.md
@@ -165,7 +166,7 @@ class MemoryDeduplicator:
         try:
             # Get all documents from collection
             # Note: This is a simplified approach. In production, you'd batch process large collections
-            all_docs = collection.similarity_search("", k=10000)  # Large number to get all
+            all_docs = await asyncio.to_thread(collection.similarity_search, "", k=10000)  # Large number to get all
             
             if len(all_docs) < 2:
                 return {
@@ -361,7 +362,7 @@ class MemoryDeduplicator:
         
         return current_stats
     
-    def preview_duplicates(self, collection) -> Dict[str, Any]:
+    async def preview_duplicates(self, collection) -> Dict[str, Any]:
         """Preview potential duplicates without making changes.
         
         Args:
@@ -370,7 +371,7 @@ class MemoryDeduplicator:
         Returns:
             Dictionary with duplicate analysis results
         """
-        return self.deduplicate_collection(collection, dry_run=True)
+        return await self.deduplicate_collection(collection, dry_run=True)
     
     def boost_existing_document(self, existing_doc: Dict[str, Any], 
                               new_metadata: Dict[str, Any]) -> Dict[str, Any]:

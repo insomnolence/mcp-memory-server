@@ -1,7 +1,8 @@
+import asyncio
 from typing import Dict, Any
 
 
-def query_permanent_documents_tool(memory_system, query: str, k: int = 5) -> dict:
+async def query_permanent_documents_tool(memory_system, query: str, k: int = 5) -> dict:
     """Query only permanent documents in the memory system.
     
     Args:
@@ -14,7 +15,7 @@ def query_permanent_documents_tool(memory_system, query: str, k: int = 5) -> dic
     """
     try:
         # Query all collections but filter for permanent content
-        all_results = memory_system.query_memories(
+        all_results = await memory_system.query_memories(
             query=query,
             collections=['short_term', 'long_term'],
             k=k*3  # Get more results to filter
@@ -73,7 +74,7 @@ def query_permanent_documents_tool(memory_system, query: str, k: int = 5) -> dic
         }
 
 
-def get_permanence_stats_tool(memory_system) -> dict:
+async def get_permanence_stats_tool(memory_system) -> dict:
     """Get comprehensive statistics about permanent content.
     
     Args:
@@ -111,7 +112,7 @@ def get_permanence_stats_tool(memory_system) -> dict:
             
             # Get all documents (using empty query to get everything)
             try:
-                docs = collection.similarity_search("", k=10000)  # Large number to get all
+                docs = await asyncio.to_thread(collection.similarity_search, "", k=10000)  # Large number to get all
                 
                 permanent_count = 0
                 for doc in docs:

@@ -5,6 +5,7 @@ Provides tools for accessing advanced deduplication features including
 domain analysis, semantic clustering, threshold optimization, and performance metrics.
 """
 
+import asyncio
 import logging
 from typing import Dict, Any, List
 
@@ -48,7 +49,7 @@ def optimize_deduplication_thresholds_tool(memory_system) -> dict:
         }
 
 
-def get_domain_analysis_tool(memory_system, collection: str = "short_term") -> dict:
+async def get_domain_analysis_tool(memory_system, collection: str = "short_term") -> dict:
     """Analyze documents by domain for deduplication threshold recommendations.
     
     Args:
@@ -81,7 +82,7 @@ def get_domain_analysis_tool(memory_system, collection: str = "short_term") -> d
                 }
             
             # Get sample of documents for analysis
-            all_docs = chroma_collection.similarity_search("", k=1000)  # Sample for analysis
+            all_docs = await asyncio.to_thread(chroma_collection.similarity_search, "", k=1000)  # Sample for analysis
             
             if not all_docs:
                 return {
@@ -125,7 +126,7 @@ def get_domain_analysis_tool(memory_system, collection: str = "short_term") -> d
         }
 
 
-def get_clustering_analysis_tool(memory_system, collection: str = "short_term") -> dict:
+async def get_clustering_analysis_tool(memory_system, collection: str = "short_term") -> dict:
     """Perform semantic clustering analysis on documents.
     
     Args:
@@ -158,7 +159,7 @@ def get_clustering_analysis_tool(memory_system, collection: str = "short_term") 
                 }
             
             # Get sample of documents for analysis
-            all_docs = chroma_collection.similarity_search("", k=500)  # Sample for clustering
+            all_docs = await asyncio.to_thread(chroma_collection.similarity_search, "", k=500)  # Sample for clustering
             
             if not all_docs:
                 return {
@@ -253,7 +254,7 @@ def get_advanced_deduplication_metrics_tool(memory_system) -> dict:
         }
 
 
-def run_advanced_deduplication_tool(memory_system, collection: str = "short_term", 
+async def run_advanced_deduplication_tool(memory_system, collection: str = "short_term", 
                                    dry_run: bool = False) -> dict:
     """Run advanced deduplication with domain awareness and semantic clustering.
     
@@ -288,7 +289,7 @@ def run_advanced_deduplication_tool(memory_system, collection: str = "short_term
                 }
             
             # Run advanced deduplication
-            results = memory_system.deduplicator.deduplicate_collection(chroma_collection, dry_run=dry_run)
+            results = await memory_system.deduplicator.deduplicate_collection(chroma_collection, dry_run=dry_run)
             results['collection'] = collection
             results['advanced_features_used'] = True
             

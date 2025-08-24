@@ -9,7 +9,7 @@ import logging
 from typing import Dict, Any, List
 
 
-def deduplicate_memories_tool(memory_system, collections: str = "short_term,long_term", 
+async def deduplicate_memories_tool(memory_system, collections: str = "short_term,long_term", 
                             dry_run: bool = False) -> dict:
     """Manually trigger deduplication process on specified collections.
     
@@ -57,7 +57,7 @@ def deduplicate_memories_tool(memory_system, collections: str = "short_term,long
                     continue
                 
                 # Run deduplication
-                result = deduplicator.deduplicate_collection(collection, dry_run=dry_run)
+                result = await deduplicator.deduplicate_collection(collection, dry_run=dry_run)
                 
                 # Aggregate results
                 collection_result = {
@@ -176,7 +176,7 @@ def get_deduplication_stats_tool(memory_system) -> dict:
         }
 
 
-def preview_duplicates_tool(memory_system, collection: str = "short_term", 
+async def preview_duplicates_tool(memory_system, collection: str = "short_term", 
                           limit: int = 10) -> dict:
     """Preview potential duplicate documents without removing them.
     
@@ -208,7 +208,7 @@ def preview_duplicates_tool(memory_system, collection: str = "short_term",
             }
         
         # Run preview (dry run)
-        result = deduplicator.preview_duplicates(target_collection)
+        result = await deduplicator.preview_duplicates(target_collection)
         
         # Format results for display
         duplicates = []
