@@ -11,6 +11,7 @@ from .handlers import (
     handle_resources_list, handle_resources_read, handle_tools_call,
     handle_unknown_method, handle_server_error
 )
+from .errors import MCPErrorCode, create_error_response
 
 
 def create_app(server_config: dict, lifecycle_manager=None) -> FastAPI:
@@ -80,9 +81,36 @@ def setup_json_rpc_handler(app: FastAPI, tool_registry: Dict[str, Any], tool_def
             return StreamingResponse(event_generator(), media_type="text/event-stream")
 
         if request.method == "POST":
+            rpc_id = None
             try:
-                body = await request.json()
-                rpc_request = JsonRpcRequest(**body)
+                # Parse JSON body
+                try:
+                    body = await request.json()
+                except Exception as e:
+                    # JSON parsing error - return parse error
+                    error_response = create_error_response(
+                        code=MCPErrorCode.PARSE_ERROR,
+                        message=f"Invalid JSON: {str(e)}"
+                    )
+                    return JSONResponse(
+                        content={"jsonrpc": "2.0", "id": None, "error": error_response["error"]},
+                        status_code=400
+                    )
+                
+                # Validate JSON-RPC request structure
+                try:
+                    rpc_request = JsonRpcRequest(**body)
+                except Exception as e:
+                    # Invalid request structure
+                    error_response = create_error_response(
+                        code=MCPErrorCode.INVALID_REQUEST,
+                        message=f"Invalid request structure: {str(e)}"
+                    )
+                    return JSONResponse(
+                        content={"jsonrpc": "2.0", "id": body.get("id"), "error": error_response["error"]},
+                        status_code=400
+                    )
+                
                 method = rpc_request.method
                 rpc_id = rpc_request.id
 

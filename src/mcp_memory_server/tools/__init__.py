@@ -6,6 +6,7 @@ from sentence_transformers import CrossEncoder
 from ..memory import HierarchicalMemorySystem, LifecycleManager
 from ..deduplication import MemoryDeduplicator
 from ..analytics import MemoryIntelligenceSystem
+from ..server.errors import create_tool_error, MCPErrorCode
 
 # --- Document Management Tools ---
 from .query import query_documents_tool, apply_reranking
@@ -50,7 +51,30 @@ async def add_document_tool(memory_system: HierarchicalMemorySystem, content: st
     Automatically scores importance and routes to appropriate memory tiers.
     """
     try:
+        # Validate inputs
+        if not content or not isinstance(content, str):
+            return create_tool_error(
+                "Content must be a non-empty string",
+                MCPErrorCode.VALIDATION_ERROR,
+                additional_data={"field": "content", "provided_type": type(content).__name__}
+            )
+        
+        if metadata is not None and not isinstance(metadata, dict):
+            return create_tool_error(
+                "Metadata must be a dictionary or None",
+                MCPErrorCode.VALIDATION_ERROR,
+                additional_data={"field": "metadata", "provided_type": type(metadata).__name__}
+            )
+        
+        if memory_type not in ["auto", "short_term", "long_term", "permanent"]:
+            return create_tool_error(
+                f"Invalid memory_type '{memory_type}'. Must be one of: auto, short_term, long_term, permanent",
+                MCPErrorCode.VALIDATION_ERROR,
+                additional_data={"field": "memory_type", "valid_values": ["auto", "short_term", "long_term", "permanent"]}
+            )
+        
         result = await memory_system.add_memory(content, metadata, context, memory_type)
+        
         return {
             "status": "success",
             "document_id": result.get("memory_id"),
@@ -59,8 +83,11 @@ async def add_document_tool(memory_system: HierarchicalMemorySystem, content: st
             "message": result.get("message")
         }
     except Exception as e:
-        logging.error(f"Error adding document: {e}")
-        return {"status": "error", "message": str(e)}
+        return create_tool_error(
+            f"Failed to add document: {str(e)}",
+            MCPErrorCode.MEMORY_SYSTEM_ERROR,
+            original_error=e
+        )
 
 # Re-add __all__ for proper module export
 __all__ = [

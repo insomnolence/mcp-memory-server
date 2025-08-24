@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, Any, Optional, List
+from ..server.errors import create_tool_error, MCPErrorCode
 
 
 async def query_documents_tool(memory_system, query: str, collections: str = None, k: int = 5, use_reranker: bool = True, reranker_model=None) -> dict:
@@ -17,11 +18,34 @@ async def query_documents_tool(memory_system, query: str, collections: str = Non
         Dictionary containing formatted search results
     """
     try:
+        # Validate inputs
+        if not query or not isinstance(query, str):
+            return create_tool_error(
+                "Query must be a non-empty string",
+                MCPErrorCode.VALIDATION_ERROR,
+                additional_data={"field": "query", "provided_type": type(query).__name__}
+            )
+        
+        if k is not None and (not isinstance(k, int) or k < 1):
+            return create_tool_error(
+                "Parameter 'k' must be a positive integer",
+                MCPErrorCode.VALIDATION_ERROR,
+                additional_data={"field": "k", "provided_value": k, "expected": "positive integer"}
+            )
+        
         # Parse collections parameter
+        collection_list = None
         if collections:
-            collection_list = [c.strip() for c in collections.split(",")]
-        else:
-            collection_list = None
+            if isinstance(collections, str):
+                collection_list = [c.strip() for c in collections.split(",")]
+            elif isinstance(collections, list):
+                collection_list = collections
+            else:
+                return create_tool_error(
+                    "Collections must be a string (comma-separated) or list of collection names",
+                    MCPErrorCode.VALIDATION_ERROR,
+                    additional_data={"field": "collections", "provided_type": type(collections).__name__}
+                )
         
         # Query using hierarchical memory system
         result = await memory_system.query_memories(query, collection_list, k)
@@ -76,7 +100,11 @@ async def query_documents_tool(memory_system, query: str, collections: str = Non
         
         return mcp_result
     except Exception as e:
-        raise Exception(f"Failed to query documents: {str(e)}")
+        return create_tool_error(
+            f"Failed to query documents: {str(e)}",
+            MCPErrorCode.MEMORY_SYSTEM_ERROR,
+            original_error=e
+        )
 
 
 async def apply_reranking(query: str, result: dict, reranker_model=None) -> dict:

@@ -5,6 +5,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from .models import JsonRpcRequest, JsonRpcResponse, JsonRpcError
+from .errors import MCPErrorCode, create_error_response
 
 
 def convert_to_mcp_format(tool_result: Dict[str, Any]) -> Dict[str, Any]:
@@ -123,33 +124,110 @@ async def handle_resources_read(rpc_id: int, params: dict) -> JSONResponse:
 
 
 async def handle_tools_call(rpc_id: int, params: dict, tool_registry: Dict[str, Any]) -> JSONResponse:
-    """Handle tools/call request."""
-    tool_name = params.get("name")
-    tool_args = params.get("arguments", {})
-    
-    tool_func = tool_registry.get(tool_name)
-    if not tool_func:
+    """Handle tools/call request with comprehensive error handling."""
+    try:
+        # Validate required parameters
+        if not isinstance(params, dict):
+            error_response = JsonRpcError(
+                id=rpc_id,
+                error={
+                    "code": int(MCPErrorCode.INVALID_PARAMS),
+                    "message": "Parameters must be an object",
+                    "data": {"provided_type": type(params).__name__}
+                }
+            )
+            return JSONResponse(content=error_response.dict(), status_code=400)
+        
+        tool_name = params.get("name")
+        if not tool_name:
+            error_response = JsonRpcError(
+                id=rpc_id,
+                error={
+                    "code": int(MCPErrorCode.INVALID_PARAMS),
+                    "message": "Missing required parameter 'name'",
+                    "data": {"required_params": ["name"]}
+                }
+            )
+            return JSONResponse(content=error_response.dict(), status_code=400)
+        
+        tool_args = params.get("arguments", {})
+        if not isinstance(tool_args, dict):
+            error_response = JsonRpcError(
+                id=rpc_id,
+                error={
+                    "code": int(MCPErrorCode.INVALID_PARAMS),
+                    "message": "Tool arguments must be an object",
+                    "data": {"provided_type": type(tool_args).__name__}
+                }
+            )
+            return JSONResponse(content=error_response.dict(), status_code=400)
+        
+        # Check if tool exists
+        tool_func = tool_registry.get(tool_name)
+        if not tool_func:
+            error_response = JsonRpcError(
+                id=rpc_id,
+                error={
+                    "code": int(MCPErrorCode.METHOD_NOT_FOUND),
+                    "message": f"Tool '{tool_name}' not found",
+                    "data": {
+                        "available_tools": list(tool_registry.keys()),
+                        "requested_tool": tool_name
+                    }
+                }
+            )
+            return JSONResponse(content=error_response.dict(), status_code=404)
+        
+        # Execute tool function with error handling
+        import asyncio
+        try:
+            if asyncio.iscoroutinefunction(tool_func):
+                result = await tool_func(**tool_args)
+            else:
+                result = tool_func(**tool_args)
+        except TypeError as e:
+            # Parameter validation error
+            error_response = JsonRpcError(
+                id=rpc_id,
+                error={
+                    "code": int(MCPErrorCode.INVALID_PARAMS),
+                    "message": f"Invalid parameters for tool '{tool_name}': {str(e)}",
+                    "data": {"tool_name": tool_name, "provided_args": list(tool_args.keys())}
+                }
+            )
+            return JSONResponse(content=error_response.dict(), status_code=400)
+        except Exception as e:
+            # Tool execution error
+            error_response = JsonRpcError(
+                id=rpc_id,
+                error={
+                    "code": int(MCPErrorCode.TOOL_EXECUTION_ERROR),
+                    "message": f"Tool '{tool_name}' execution failed: {str(e)}",
+                    "data": {
+                        "tool_name": tool_name,
+                        "error_type": type(e).__name__
+                    }
+                }
+            )
+            return JSONResponse(content=error_response.dict(), status_code=500)
+        
+        # Convert custom tool response to MCP-compliant format
+        mcp_result = convert_to_mcp_format(result)
+        
+        response = JsonRpcResponse(id=rpc_id, result=mcp_result)
+        return JSONResponse(content=response.dict(), media_type="application/json-rpc")
+        
+    except Exception as e:
+        # Unexpected error in handler
         error_response = JsonRpcError(
             id=rpc_id,
             error={
-                "code": -32601,
-                "message": f"Tool '{tool_name}' not found."
+                "code": int(MCPErrorCode.INTERNAL_ERROR),
+                "message": f"Internal server error: {str(e)}",
+                "data": {"error_type": type(e).__name__}
             }
         )
-        return JSONResponse(content=error_response.dict(), status_code=400)
-    
-    # Handle both sync and async tool functions
-    import asyncio
-    if asyncio.iscoroutinefunction(tool_func):
-        result = await tool_func(**tool_args)
-    else:
-        result = tool_func(**tool_args)
-    
-    # Convert custom tool response to MCP-compliant format
-    mcp_result = convert_to_mcp_format(result)
-    
-    response = JsonRpcResponse(id=rpc_id, result=mcp_result)
-    return JSONResponse(content=response.dict(), media_type="application/json-rpc")
+        return JSONResponse(content=error_response.dict(), status_code=500)
 
 
 def handle_unknown_method(rpc_id: int, method: str) -> JSONResponse:
@@ -157,11 +235,15 @@ def handle_unknown_method(rpc_id: int, method: str) -> JSONResponse:
     error_response = JsonRpcError(
         id=rpc_id,
         error={
-            "code": -32601,
-            "message": f"Method '{method}' not found."
+            "code": int(MCPErrorCode.METHOD_NOT_FOUND),
+            "message": f"Method '{method}' not found",
+            "data": {
+                "requested_method": method,
+                "available_methods": ["initialize", "tools/list", "tools/call", "resources/list", "resources/read"]
+            }
         }
     )
-    return JSONResponse(content=error_response.dict(), status_code=400)
+    return JSONResponse(content=error_response.dict(), status_code=404)
 
 
 def handle_server_error(rpc_id: int, error: Exception) -> JSONResponse:
@@ -169,8 +251,12 @@ def handle_server_error(rpc_id: int, error: Exception) -> JSONResponse:
     error_response = JsonRpcError(
         id=rpc_id,
         error={
-            "code": -32000,
-            "message": f"An unexpected error occurred: {str(error)}"
+            "code": int(MCPErrorCode.INTERNAL_ERROR),
+            "message": f"Internal server error: {str(error)}",
+            "data": {
+                "error_type": type(error).__name__,
+                "server_component": "json_rpc_handler"
+            }
         }
     )
     return JSONResponse(content=error_response.dict(), status_code=500)
