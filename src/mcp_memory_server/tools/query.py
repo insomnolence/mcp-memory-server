@@ -64,16 +64,35 @@ async def query_documents_tool(memory_system, query: str, collections: str = Non
         # Return the full formatted text blocks directly
         mcp_result = {
             "content": [],
+            "results": [],  # Structured results for programmatic access
             "isError": False  # Required by MCP spec
         }
 
         for content_block in result.get("content", []):
             # Use the full formatted text directly
             text = content_block.get("text", "")
+            metadata = content_block.get("metadata", {})
             if text.strip():
                 mcp_result["content"].append({
                     "type": "text",
                     "text": text
+                })
+                # Also add structured result for backward compatibility
+                # Extract the document content (between score line and metadata)
+                lines = text.split('\n')
+                content_start = 0
+                content_end = len(lines)
+                for i, line in enumerate(lines):
+                    if line.startswith('**Score:'):
+                        content_start = i + 2  # Skip score line and empty line
+                    if line.startswith('**Metadata:**'):
+                        content_end = i
+                        break
+                doc_content = '\n'.join(lines[content_start:content_end]).strip()
+                mcp_result["results"].append({
+                    "content": doc_content,
+                    "metadata": metadata,
+                    "formatted_text": text
                 })
 
         # Add additional metadata from the original result

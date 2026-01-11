@@ -235,12 +235,11 @@ class MemoryQueryService:
         distance = memory_data['distance']
 
         # Calculate base retrieval score (offload to thread)
+        # Pass the full memory_data dict as expected by calculate_retrieval_score
         base_score = await asyncio.to_thread(
             self.importance_scorer.calculate_retrieval_score,
-            distance,
-            metadata.get('importance_score', 0.5),
-            metadata.get('access_count', 0),
-            metadata.get('timestamp', current_time),
+            memory_data,
+            query,
             current_time
         )
 

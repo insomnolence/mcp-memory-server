@@ -101,7 +101,10 @@ def start_background_maintenance_tool(lifecycle_manager: LifecycleManager) -> Di
 
         return create_success_response(
             message="Background maintenance started successfully",
-            data={"maintenance_enabled": lifecycle_manager.maintenance_enabled}
+            data={
+                "message": "Background maintenance started successfully",
+                "maintenance_enabled": lifecycle_manager.maintenance_enabled
+            }
         )
 
     except Exception as e:
@@ -126,7 +129,9 @@ def stop_background_maintenance_tool(lifecycle_manager: LifecycleManager) -> Dic
 
         return create_success_response(
             message="Background maintenance stopped successfully",
-            data={}
+            data={
+                "message": "Background maintenance stopped successfully"
+            }
         )
 
     except Exception as e:

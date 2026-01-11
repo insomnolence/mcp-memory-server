@@ -187,7 +187,7 @@ class MemoryDeduplicator:
                 doc_dicts.append(doc_dict)
 
             # Apply semantic clustering if enabled
-            clustered_docs = self.advanced_features.apply_semantic_clustering(doc_dicts)
+            clustered_docs = self.advanced_features.perform_semantic_clustering(doc_dicts)
 
             # Find duplicates using advanced features with domain awareness
             duplicate_pairs = self._find_duplicates_advanced(doc_dicts, clustered_docs)
@@ -320,10 +320,14 @@ class MemoryDeduplicator:
             duplicates = self._find_duplicates_simple(documents)
 
         # Track advanced features usage
+        effectiveness_score = len(duplicates) / len(documents) if len(documents) > 0 else 0.0
         self.advanced_features.track_effectiveness(
-            total_documents=len(documents),
-            duplicates_found=len(duplicates),
-            clusters_formed=len(clustered_docs.get('clusters', {}))
+            effectiveness_score=effectiveness_score,
+            context={
+                'total_documents': len(documents),
+                'duplicates_found': len(duplicates),
+                'clusters_formed': len(clustered_docs.get('clusters', {}))
+            }
         )
 
         return duplicates
@@ -454,7 +458,7 @@ class MemoryDeduplicator:
         Returns:
             Dictionary with clustering analysis results
         """
-        return self.advanced_features.apply_semantic_clustering(documents)
+        return self.advanced_features.perform_semantic_clustering(documents)
 
     def get_advanced_performance_metrics(self) -> Dict[str, Any]:
         """Get comprehensive performance metrics from advanced features.

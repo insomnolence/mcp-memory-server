@@ -209,7 +209,8 @@ def get_predictive_insights_tool(memory_system, prediction_type: str = "all") ->
         data={
             "status": "not_implemented",
             "prediction_type": prediction_type,
-            "suggestion": "Use get_comprehensive_analytics or get_system_health_assessment for current system metrics"
+            "suggestion": "Use get_comprehensive_analytics or get_system_health_assessment for current system metrics",
+            "insights": []  # Empty insights array for backward compatibility
         }
     )
 
