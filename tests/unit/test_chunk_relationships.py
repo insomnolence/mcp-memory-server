@@ -154,7 +154,8 @@ class TestChunkRelationshipManager:
         assert related[0]['relationship_type'] == 'semantic_similarity'
         assert related[0]['content_preview'] == content2
 
-    def test_update_relationships_semantic(self, chunk_relationship_manager):
+    @pytest.mark.asyncio
+    async def test_update_relationships_semantic(self, chunk_relationship_manager):
         # Mock a document and a candidate for semantic relationship
         doc = Document(page_content="apple fruit", metadata={'chunk_id': 'doc1'})
         candidate = Document(page_content="orange fruit", metadata={'chunk_id': 'doc2'})
@@ -163,11 +164,11 @@ class TestChunkRelationshipManager:
         sim_calc = chunk_relationship_manager.memory_system.deduplicator.similarity_calculator
         sim_calc.calculate_similarity.return_value = 0.9
 
-        # Mock the update_document_metadata method and initialize chunk_relationships
-        chunk_relationship_manager.memory_system.update_document_metadata = Mock()
+        # Mock the update_document_metadata method (now async) and initialize chunk_relationships
+        chunk_relationship_manager.memory_system.update_document_metadata = AsyncMock(return_value={'success': True})
         chunk_relationship_manager.chunk_relationships['doc1'] = {'related_chunks': []}
 
-        chunk_relationship_manager._update_relationships_semantic(doc, [candidate], 'short_term')
+        await chunk_relationship_manager._update_relationships_semantic(doc, [candidate], 'short_term')
 
         # Assert that the relationship has been added to internal relationship manager
         chunk_id = 'doc1'
@@ -178,7 +179,8 @@ class TestChunkRelationshipManager:
         assert chunk_rel['related_chunks'][0]['target_chunk_id'] == 'doc2'
         assert chunk_rel['related_chunks'][0]['type'] == 'semantic_similarity'
 
-    def test_update_relationships_co_occurrence(self, chunk_relationship_manager):
+    @pytest.mark.asyncio
+    async def test_update_relationships_co_occurrence(self, chunk_relationship_manager):
         # Mock a list of documents for co-occurrence
         docs = [
             Document(page_content="apple and banana", metadata={'chunk_id': 'doc1'}),
@@ -186,12 +188,12 @@ class TestChunkRelationshipManager:
             Document(page_content="grape and kiwi", metadata={'chunk_id': 'doc3'})
         ]
 
-        # Mock the update_document_metadata method and initialize chunk_relationships
-        chunk_relationship_manager.memory_system.update_document_metadata = Mock()
+        # Mock the update_document_metadata method (now async) and initialize chunk_relationships
+        chunk_relationship_manager.memory_system.update_document_metadata = AsyncMock(return_value={'success': True})
         chunk_relationship_manager.chunk_relationships['doc1'] = {'related_chunks': []}
         chunk_relationship_manager.chunk_relationships['doc2'] = {'related_chunks': []}
 
-        chunk_relationship_manager._update_relationships_co_occurrence(docs, 'short_term')
+        await chunk_relationship_manager._update_relationships_co_occurrence(docs, 'short_term')
 
         # Assert that relationships are added for doc1 and doc2 (co-occurrence of 'banana')
         assert 'doc1' in chunk_relationship_manager.chunk_relationships

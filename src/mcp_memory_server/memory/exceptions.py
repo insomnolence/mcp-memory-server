@@ -5,11 +5,13 @@ These exceptions provide more specific error handling than generic Exception
 catches, allowing for better debugging and error recovery.
 """
 
+from typing import Any, Dict, List, Optional
+
 
 class MemorySystemError(Exception):
     """Base exception for all memory system errors."""
 
-    def __init__(self, message: str, details: dict = None):
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
         super().__init__(message)
         self.message = message
         self.details = details or {}
@@ -23,7 +25,7 @@ class StorageError(MemorySystemError):
 class DocumentNotFoundError(MemorySystemError):
     """Requested document was not found in any collection."""
 
-    def __init__(self, document_id: str, collections_searched: list = None):
+    def __init__(self, document_id: str, collections_searched: Optional[List[str]] = None):
         message = f"Document '{document_id}' not found"
         if collections_searched:
             message += f" in collections: {', '.join(collections_searched)}"
@@ -37,7 +39,7 @@ class DocumentNotFoundError(MemorySystemError):
 class CollectionError(MemorySystemError):
     """Error related to a specific collection."""
 
-    def __init__(self, collection_name: str, operation: str, cause: str = None):
+    def __init__(self, collection_name: str, operation: str, cause: Optional[str] = None):
         message = f"Collection '{collection_name}' error during {operation}"
         if cause:
             message += f": {cause}"
@@ -80,7 +82,7 @@ class ScoringError(MemorySystemError):
 class ChunkRelationshipError(MemorySystemError):
     """Error managing chunk relationships."""
 
-    def __init__(self, chunk_id: str, operation: str, cause: str = None):
+    def __init__(self, chunk_id: str, operation: str, cause: Optional[str] = None):
         message = f"Chunk relationship error for '{chunk_id}' during {operation}"
         if cause:
             message += f": {cause}"
@@ -105,7 +107,7 @@ class TTLError(LifecycleError):
 class StateError(MemorySystemError):
     """Error loading or saving system state."""
 
-    def __init__(self, operation: str, path: str = None, cause: str = None):
+    def __init__(self, operation: str, path: Optional[str] = None, cause: Optional[str] = None):
         message = f"State {operation} error"
         if path:
             message += f" for '{path}'"

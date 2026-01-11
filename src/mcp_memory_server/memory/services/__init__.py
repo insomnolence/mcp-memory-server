@@ -9,6 +9,11 @@ Provides decomposed services for the HierarchicalMemorySystem:
 - DocumentUpdateService: CRUD operations
 - MemoryStatsService: Statistics aggregation
 - HierarchicalMemorySystem: Facade for backward compatibility
+
+Relationship persistence services (extracted from ChunkRelationshipManager):
+- RelationshipPersistenceService: Serialization/deserialization of relationships
+- MergeHistoryService: Merge history storage and retrieval
+- RelationshipQueryService: Query and analysis of relationships
 """
 
 from .storage import MemoryStorageService
@@ -18,6 +23,9 @@ from .maintenance import MemoryMaintenanceService
 from .update import DocumentUpdateService
 from .stats import MemoryStatsService
 from .facade import HierarchicalMemorySystem
+from .relationship_persistence import RelationshipPersistenceService
+from .merge_history import MergeHistoryService
+from .relationship_query import RelationshipQueryService
 
 __all__ = [
     'MemoryStorageService',
@@ -27,4 +35,7 @@ __all__ = [
     'DocumentUpdateService',
     'MemoryStatsService',
     'HierarchicalMemorySystem',
+    'RelationshipPersistenceService',
+    'MergeHistoryService',
+    'RelationshipQueryService',
 ]

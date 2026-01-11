@@ -1,13 +1,13 @@
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional
 
 
 class Config:
     """Configuration manager for the MCP Server with JSON-based configuration and validation."""
 
-    def __init__(self, config_path: str = None, domain: str = None, environment: str = "development"):
+    def __init__(self, config_path: Optional[str] = None, domain: Optional[str] = None, environment: str = "development"):
         # Set up paths relative to project root
         self.project_root = Path(__file__).parent.parent.parent.parent
 
@@ -87,7 +87,7 @@ class Config:
             }
         }
 
-    def _setup_logging(self):
+    def _setup_logging(self) -> None:
         """Setup logging based on configuration"""
         log_config = self._config.get('logging', {})
         log_file = log_config.get('file', 'logs/mcp_server.log')
@@ -124,9 +124,9 @@ class Config:
                 result[key] = value
         return result
 
-    def get(self, *keys, default=None) -> Any:
+    def get(self, *keys: str, default: Any = None) -> Any:
         """Get nested configuration value using dot notation"""
-        value = self._config
+        value: Any = self._config
         for key in keys:
             if isinstance(value, dict) and key in value:
                 value = value[key]
@@ -134,38 +134,47 @@ class Config:
                 return default
         return value
 
-    def get_database_config(self) -> dict:
+    def get_database_config(self) -> Dict[str, Any]:
         """Get database configuration"""
-        return self.get('database', default={})
+        result = self.get('database', default={})
+        return result if isinstance(result, dict) else {}
 
-    def get_embeddings_config(self) -> dict:
+    def get_embeddings_config(self) -> Dict[str, Any]:
         """Get embeddings configuration"""
-        return self.get('embeddings', default={})
+        result = self.get('embeddings', default={})
+        return result if isinstance(result, dict) else {}
 
-    def get_reranker_config(self) -> dict:
+    def get_reranker_config(self) -> Dict[str, Any]:
         """Get reranker configuration"""
-        return self.get('reranker', default={})
+        result = self.get('reranker', default={})
+        return result if isinstance(result, dict) else {}
 
-    def get_memory_scoring_config(self) -> dict:
+    def get_memory_scoring_config(self) -> Dict[str, Any]:
         """Get memory scoring configuration"""
-        return self.get('memory_scoring', default={})
+        result = self.get('memory_scoring', default={})
+        return result if isinstance(result, dict) else {}
 
-    def get_server_config(self) -> dict:
+    def get_server_config(self) -> Dict[str, Any]:
         """Get server configuration"""
-        return self.get('server', default={})
+        result = self.get('server', default={})
+        return result if isinstance(result, dict) else {}
 
-    def get_ttl_config(self) -> dict:
+    def get_ttl_config(self) -> Dict[str, Any]:
         """Get TTL configuration"""
-        return self.get('ttl', default={})
+        result = self.get('ttl', default={})
+        return result if isinstance(result, dict) else {}
 
-    def get_memory_management_config(self) -> dict:
+    def get_memory_management_config(self) -> Dict[str, Any]:
         """Get memory management configuration"""
-        return self.get('memory_management', default={})
+        result = self.get('memory_management', default={})
+        return result if isinstance(result, dict) else {}
 
-    def get_lifecycle_config(self) -> dict:
+    def get_lifecycle_config(self) -> Dict[str, Any]:
         """Get lifecycle management configuration"""
-        return self.get('lifecycle', default={})
+        result = self.get('lifecycle', default={})
+        return result if isinstance(result, dict) else {}
 
-    def get_deduplication_config(self) -> dict:
+    def get_deduplication_config(self) -> Dict[str, Any]:
         """Get deduplication configuration"""
-        return self.get('deduplication', default={'enabled': False})
+        result = self.get('deduplication', default={'enabled': False})
+        return result if isinstance(result, dict) else {'enabled': False}

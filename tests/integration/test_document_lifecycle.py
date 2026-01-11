@@ -32,7 +32,11 @@ async def test_cleanup_function_works_correctly(running_mcp_server):
 
     current_time = time.time()
     print(f"\nDocument TTL: tier={ttl_tier}, expiry={ttl_expiry}, current_time={current_time}")
-    print(f"Time until expiry: {ttl_expiry - current_time:.1f} seconds")
+    # Handle permanent tier (no expiry) or numeric expiry
+    if ttl_tier == 'permanent' or not ttl_expiry:
+        print("Time until expiry: never (permanent)")
+    else:
+        print(f"Time until expiry: {float(ttl_expiry) - current_time:.1f} seconds")
 
     # Test cleanup function (should not delete non-expired document)
     cleanup_result = await running_mcp_server.call_mcp_tool("cleanup_expired_memories")
@@ -55,7 +59,10 @@ async def test_cleanup_function_works_correctly(running_mcp_server):
     print("✅ TTL system and cleanup function working correctly")
     print("   - Document has proper TTL metadata (tier: {})".format(ttl_tier))
     print("   - Cleanup function successfully identifies non-expired documents")
-    print("   - Document expiry time properly calculated ({:.1f}s from now)".format(ttl_expiry - current_time))
+    if ttl_tier == 'permanent' or not ttl_expiry:
+        print("   - Document is permanent (no expiry)")
+    else:
+        print("   - Document expiry time properly calculated ({:.1f}s from now)".format(float(ttl_expiry) - current_time))
 
     # Get memory stats for verification
     stats_result = await running_mcp_server.call_mcp_tool("get_memory_stats")

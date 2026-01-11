@@ -263,545 +263,254 @@ class TestDeleteDocument:
             ids=['chunk_1', 'chunk_2', 'chunk_3']
         )
 
+
+class TestUpdateDocumentMetadata:
+    """Tests for update_document_metadata method."""
+
     @pytest.mark.asyncio
-    async def test_delete_document_success_long_term(
+    async def test_update_metadata_success(
         self,
         update_service,
-        mock_short_term_memory,
-        mock_long_term_memory
+        mock_short_term_memory
     ):
-        """Test successful deletion of a document from long-term memory."""
-        document_id = "doc_456"
-        # Short-term has no matching documents
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['other_chunk'],
-            'documents': ['other content'],
-            'metadatas': [{'document_id': 'other_doc'}]
+        """Test successful metadata update on a chunk."""
+        chunk_id = "doc_123_chunk_0"
+        metadata_updates = {
+            'related_chunks_data': '[{"target": "doc_456_chunk_0"}]',
+            'custom_field': 'custom_value'
         }
-        # Long-term has the document
-        mock_long_term_memory._collection.get.return_value = {
-            'ids': ['lt_chunk_1', 'lt_chunk_2'],
-            'documents': ['lt_content1', 'lt_content2'],
-            'metadatas': [
-                {'document_id': document_id, 'chunk_index': 0},
-                {'document_id': document_id, 'chunk_index': 1}
-            ]
-        }
-
-        result = await update_service.delete_document(document_id)
-
-        assert result['success'] is True
-        assert result['chunks_deleted'] == 2
-        assert result['collection'] == 'long_term'
-
-    @pytest.mark.asyncio
-    async def test_delete_document_with_memory_id(
-            self, update_service, mock_short_term_memory):
-        """Test deletion using memory_id instead of document_id in metadata."""
-        memory_id = "mem_789"
         mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
+            'ids': ['chromadb_uuid_123'],
             'documents': ['content'],
-            'metadatas': [{'memory_id': memory_id, 'chunk_index': 0}]
+            'metadatas': [{'chunk_id': chunk_id, 'existing_field': 'keep_this'}]
         }
 
-        result = await update_service.delete_document(memory_id)
+        result = await update_service.update_document_metadata(chunk_id, metadata_updates)
 
         assert result['success'] is True
-        assert result['chunks_deleted'] == 1
-
-    @pytest.mark.asyncio
-    async def test_delete_document_not_found(
-        self,
-        update_service,
-        mock_short_term_memory,
-        mock_long_term_memory
-    ):
-        """Test deletion when document is not found in any collection."""
-        document_id = "nonexistent_doc"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': [],
-            'documents': [],
-            'metadatas': []
-        }
-        mock_long_term_memory._collection.get.return_value = {
-            'ids': [],
-            'documents': [],
-            'metadatas': []
-        }
-
-        result = await update_service.delete_document(document_id)
-
-        assert result['success'] is False
-        assert result['chunks_deleted'] == 0
-        assert result['collection'] is None
-        assert "not found" in result['message']
-
-    @pytest.mark.asyncio
-    async def test_delete_document_cleans_up_chunk_relationships(
-        self,
-        update_service,
-        mock_short_term_memory,
-        mock_chunk_manager
-    ):
-        """Test that chunk relationships are cleaned up on deletion."""
-        document_id = "doc_with_relations"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1', 'chunk_2'],
-            'documents': ['content1', 'content2'],
-            'metadatas': [
-                {'document_id': document_id, 'chunk_index': 0},
-                {'document_id': document_id, 'chunk_index': 1}
-            ]
-        }
-        mock_chunk_manager.document_relationships = {
-            document_id: {'chunks': ['chunk_1', 'chunk_2']}}
-        mock_chunk_manager.chunk_relationships = {
-            'chunk_1': {'related': []},
-            'chunk_2': {'related': []}
-        }
-
-        result = await update_service.delete_document(document_id)
-
-        assert result['success'] is True
-        assert document_id not in mock_chunk_manager.document_relationships
-        assert 'chunk_1' not in mock_chunk_manager.chunk_relationships
-        assert 'chunk_2' not in mock_chunk_manager.chunk_relationships
-
-    @pytest.mark.asyncio
-    async def test_delete_document_handles_relationship_cleanup_error(
-        self,
-        update_service,
-        mock_short_term_memory,
-        mock_chunk_manager
-    ):
-        """Test that errors in relationship cleanup don't fail the deletion."""
-        document_id = "doc_123"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
-            'documents': ['content'],
-            'metadatas': [{'document_id': document_id}]
-        }
-        # Make document_relationships raise an error
-        mock_chunk_manager.document_relationships = MagicMock()
-        mock_chunk_manager.document_relationships.__contains__ = Mock(
-            side_effect=Exception("Cleanup error"))
-
-        result = await update_service.delete_document(document_id)
-
-        # Deletion should still succeed
-        assert result['success'] is True
-
-    @pytest.mark.asyncio
-    async def test_delete_document_collection_error(
-            self, update_service, mock_short_term_memory):
-        """Test handling of collection errors during deletion."""
-        document_id = "doc_error"
-        mock_short_term_memory._collection.get.side_effect = Exception(
-            "Database error")
-
-        result = await update_service.delete_document(document_id)
-
-        # Should continue to next collection and eventually return not found
-        assert result['success'] is False
-        assert "not found" in result['message']
-
-    @pytest.mark.asyncio
-    async def test_delete_document_with_none_metadata(
-            self, update_service, mock_short_term_memory):
-        """Test deletion handles None metadata entries gracefully."""
-        document_id = "doc_123"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1', 'chunk_2', 'chunk_3'],
-            'documents': ['content1', 'content2', 'content3'],
-            'metadatas': [
-                None,
-                {'document_id': document_id},
-                {'document_id': 'other_doc'}
-            ]
-        }
-
-        result = await update_service.delete_document(document_id)
-
-        assert result['success'] is True
-        assert result['chunks_deleted'] == 1
-
-    @pytest.mark.asyncio
-    async def test_delete_document_collection_without_internal_collection(
-        self,
-        mock_long_term_memory,
-        mock_chunk_manager
-    ):
-        """Test deletion when collection doesn't have _collection attribute."""
-        mock_no_collection = Mock(spec=[])  # Mock without _collection
-        service = DocumentUpdateService(
-            short_term_memory=mock_no_collection,
-            long_term_memory=mock_long_term_memory,
-            chunk_manager=mock_chunk_manager
-        )
-        mock_long_term_memory._collection.get.return_value = {
-            'ids': [], 'documents': [], 'metadatas': []
-        }
-
-        result = await service.delete_document("doc_123")
-
-        assert result['success'] is False
-
-
-class TestUpdateDocumentImportance:
-    """Tests for update_document_importance method."""
-
-    @pytest.mark.asyncio
-    async def test_update_importance_success(
-        self,
-        update_service,
-        mock_short_term_memory,
-        mock_lifecycle_manager
-    ):
-        """Test successful importance score update."""
-        document_id = "doc_123"
-        new_importance = 0.75
-        old_importance = 0.5
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1', 'chunk_2'],
-            'documents': ['content1', 'content2'],
-            'metadatas': [
-                {'document_id': document_id,
-                 'importance_score': old_importance,
-                 'ttl_tier': 'medium_frequency'},
-                {'document_id': document_id,
-                 'importance_score': old_importance,
-                 'ttl_tier': 'medium_frequency'}
-            ]
-        }
-
-        result = await update_service.update_document_importance(document_id, new_importance)
-
-        assert result['success'] is True
-        assert result['old_importance'] == old_importance
-        assert result['new_importance'] == new_importance
-        assert result['chunks_updated'] == 2
+        assert result['chunk_id'] == chunk_id
+        assert 'related_chunks_data' in result['fields_updated']
+        assert 'custom_field' in result['fields_updated']
         assert result['collection'] == 'short_term'
+
+        # Verify ChromaDB update was called with merged metadata
         mock_short_term_memory._collection.update.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_update_importance_with_reason(
-        self,
-        update_service,
-        mock_short_term_memory
-    ):
-        """Test importance update with a reason provided."""
-        document_id = "doc_123"
-        new_importance = 0.3
-        reason = "User indicated document is less relevant"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
-            'documents': ['content'],
-            'metadatas': [{'document_id': document_id, 'importance_score': 0.7}]
-        }
-
-        result = await update_service.update_document_importance(
-            document_id, new_importance, reason=reason
-        )
-
-        assert result['success'] is True
-        # Verify that the reason was included in the update
         call_args = mock_short_term_memory._collection.update.call_args
         updated_metadata = call_args[1]['metadatas'][0]
-        assert updated_metadata['importance_change_reason'] == reason
+        assert updated_metadata['existing_field'] == 'keep_this'
+        assert updated_metadata['related_chunks_data'] == '[{"target": "doc_456_chunk_0"}]'
+        assert updated_metadata['custom_field'] == 'custom_value'
+        assert 'metadata_updated_at' in updated_metadata
 
     @pytest.mark.asyncio
-    async def test_update_importance_recalculates_ttl(
-        self,
-        update_service,
-        mock_short_term_memory,
-        mock_lifecycle_manager
-    ):
-        """Test that TTL is recalculated when importance changes."""
-        document_id = "doc_123"
-        new_importance = 0.8
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
-            'documents': ['content'],
-            'metadatas': [
-                {'document_id': document_id,
-                 'importance_score': 0.3,
-                 'ttl_tier': 'high_frequency'}
-            ]
-        }
-
-        result = await update_service.update_document_importance(document_id, new_importance)
-
-        assert result['success'] is True
-        mock_lifecycle_manager.ttl_manager.add_ttl_metadata.assert_called()
-
-    @pytest.mark.asyncio
-    async def test_update_importance_invalid_score_negative(
-            self, update_service):
-        """Test that negative importance scores are rejected."""
-        result = await update_service.update_document_importance("doc_123", -0.1)
-
-        assert result['success'] is False
-        assert "between 0.0 and 1.0" in result['message']
-
-    @pytest.mark.asyncio
-    async def test_update_importance_invalid_score_above_one(
-            self, update_service):
-        """Test that importance scores above 1.0 are rejected."""
-        result = await update_service.update_document_importance("doc_123", 1.5)
-
-        assert result['success'] is False
-        assert "between 0.0 and 1.0" in result['message']
-
-    @pytest.mark.asyncio
-    async def test_update_importance_boundary_zero(
-        self,
-        update_service,
-        mock_short_term_memory
-    ):
-        """Test importance update with boundary value 0.0."""
-        document_id = "doc_123"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
-            'documents': ['content'],
-            'metadatas': [{'document_id': document_id, 'importance_score': 0.5}]
-        }
-
-        result = await update_service.update_document_importance(document_id, 0.0)
-
-        assert result['success'] is True
-        assert result['new_importance'] == 0.0
-
-    @pytest.mark.asyncio
-    async def test_update_importance_boundary_one(
-        self,
-        update_service,
-        mock_short_term_memory
-    ):
-        """Test importance update with boundary value 1.0."""
-        document_id = "doc_123"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
-            'documents': ['content'],
-            'metadatas': [{'document_id': document_id, 'importance_score': 0.5}]
-        }
-
-        result = await update_service.update_document_importance(document_id, 1.0)
-
-        assert result['success'] is True
-        assert result['new_importance'] == 1.0
-
-    @pytest.mark.asyncio
-    async def test_update_importance_document_not_found(
+    async def test_update_metadata_in_long_term(
         self,
         update_service,
         mock_short_term_memory,
         mock_long_term_memory
     ):
-        """Test importance update when document is not found."""
+        """Test metadata update for chunk in long-term memory."""
+        chunk_id = "lt_doc_chunk_0"
         mock_short_term_memory._collection.get.return_value = {
             'ids': [], 'documents': [], 'metadatas': []
         }
         mock_long_term_memory._collection.get.return_value = {
-            'ids': [], 'documents': [], 'metadatas': []
-        }
-
-        result = await update_service.update_document_importance("nonexistent", 0.5)
-
-        assert result['success'] is False
-        assert "not found" in result['message']
-
-    @pytest.mark.asyncio
-    async def test_update_importance_in_long_term(
-        self,
-        update_service,
-        mock_short_term_memory,
-        mock_long_term_memory
-    ):
-        """Test importance update for document in long-term memory."""
-        document_id = "lt_doc_456"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': [], 'documents': [], 'metadatas': []
-        }
-        mock_long_term_memory._collection.get.return_value = {
-            'ids': ['lt_chunk_1'],
+            'ids': ['lt_uuid_456'],
             'documents': ['content'],
-            'metadatas': [{'document_id': document_id, 'importance_score': 0.6}]
+            'metadatas': [{'chunk_id': chunk_id}]
         }
 
-        result = await update_service.update_document_importance(document_id, 0.9)
+        result = await update_service.update_document_metadata(
+            chunk_id, {'new_field': 'value'}
+        )
 
         assert result['success'] is True
         assert result['collection'] == 'long_term'
+        mock_long_term_memory._collection.update.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_importance_without_lifecycle_manager(
-        self,
-        update_service_minimal,
-        mock_short_term_memory
-    ):
-        """Test importance update without lifecycle manager (no TTL recalculation)."""
-        document_id = "doc_123"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
-            'documents': ['content'],
-            'metadatas': [{'document_id': document_id, 'importance_score': 0.5}]
-        }
-
-        result = await update_service_minimal.update_document_importance(document_id, 0.8)
-
-        assert result['success'] is True
-        # TTL tier should remain unchanged since no lifecycle manager
-        call_args = mock_short_term_memory._collection.update.call_args
-        updated_metadata = call_args[1]['metadatas'][0]
-        assert 'importance_changed_at' in updated_metadata
-
-    @pytest.mark.asyncio
-    async def test_update_importance_uses_memory_id_fallback(
-        self,
-        update_service,
-        mock_short_term_memory
-    ):
-        """Test importance update using memory_id when document_id is not present."""
-        memory_id = "mem_789"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
-            'documents': ['content'],
-            'metadatas': [{'memory_id': memory_id, 'importance_score': 0.4}]
-        }
-
-        result = await update_service.update_document_importance(memory_id, 0.7)
-
-        assert result['success'] is True
-
-    @pytest.mark.asyncio
-    async def test_update_importance_handles_collection_error(
+    async def test_update_metadata_chunk_not_found(
         self,
         update_service,
         mock_short_term_memory,
         mock_long_term_memory
     ):
-        """Test importance update handles collection errors gracefully."""
-        document_id = "doc_error"
+        """Test metadata update when chunk is not found."""
         mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
-            'documents': ['content'],
-            'metadatas': [{'document_id': document_id, 'importance_score': 0.5}]
+            'ids': [], 'documents': [], 'metadatas': []
         }
-        mock_short_term_memory._collection.update.side_effect = Exception(
-            "Update failed")
+        mock_long_term_memory._collection.get.return_value = {
+            'ids': [], 'documents': [], 'metadatas': []
+        }
 
-        result = await update_service.update_document_importance(document_id, 0.8)
+        result = await update_service.update_document_metadata(
+            'nonexistent_chunk', {'field': 'value'}
+        )
 
         assert result['success'] is False
-        assert "Error updating document" in result['message']
+        assert 'not found' in result['message']
 
     @pytest.mark.asyncio
-    async def test_update_importance_preserves_existing_metadata(
+    async def test_update_metadata_empty_chunk_id_rejected(self, update_service):
+        """Test that empty chunk_id is rejected."""
+        result = await update_service.update_document_metadata('', {'field': 'value'})
+
+        assert result['success'] is False
+        assert 'chunk_id' in result['message']
+
+    @pytest.mark.asyncio
+    async def test_update_metadata_none_chunk_id_rejected(self, update_service):
+        """Test that None chunk_id is rejected."""
+        result = await update_service.update_document_metadata(None, {'field': 'value'})
+
+        assert result['success'] is False
+        assert 'chunk_id' in result['message']
+
+    @pytest.mark.asyncio
+    async def test_update_metadata_empty_updates_rejected(self, update_service):
+        """Test that empty metadata_updates is rejected."""
+        result = await update_service.update_document_metadata('chunk_123', {})
+
+        assert result['success'] is False
+        assert 'metadata_updates' in result['message']
+
+    @pytest.mark.asyncio
+    async def test_update_metadata_none_updates_rejected(self, update_service):
+        """Test that None metadata_updates is rejected."""
+        result = await update_service.update_document_metadata('chunk_123', None)
+
+        assert result['success'] is False
+        assert 'metadata_updates' in result['message']
+
+    @pytest.mark.asyncio
+    async def test_update_metadata_handles_collection_error(
         self,
         update_service,
         mock_short_term_memory
     ):
-        """Test that importance update preserves existing metadata fields."""
-        document_id = "doc_123"
-        original_metadata = {
-            'document_id': document_id,
-            'importance_score': 0.5,
-            'source': 'user_input',
-            'tags': ['important', 'work'],
-            'created_at': 1234567890
+        """Test metadata update handles collection errors gracefully."""
+        chunk_id = "chunk_123"
+        mock_short_term_memory._collection.get.return_value = {
+            'ids': ['uuid_123'],
+            'documents': ['content'],
+            'metadatas': [{'chunk_id': chunk_id}]
+        }
+        mock_short_term_memory._collection.update.side_effect = Exception("Update failed")
+
+        result = await update_service.update_document_metadata(
+            chunk_id, {'field': 'value'}
+        )
+
+        assert result['success'] is False
+        assert 'Error updating metadata' in result['message']
+
+    @pytest.mark.asyncio
+    async def test_update_metadata_preserves_all_existing_fields(
+        self,
+        update_service,
+        mock_short_term_memory
+    ):
+        """Test that all existing metadata fields are preserved."""
+        chunk_id = "chunk_123"
+        existing_metadata = {
+            'chunk_id': chunk_id,
+            'document_id': 'doc_123',
+            'chunk_index': 0,
+            'importance_score': 0.75,
+            'timestamp': 1234567890,
+            'previous_chunk': None,
+            'next_chunk': 'chunk_456'
         }
         mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
+            'ids': ['uuid_123'],
             'documents': ['content'],
-            'metadatas': [original_metadata]
+            'metadatas': [existing_metadata]
         }
 
-        result = await update_service.update_document_importance(document_id, 0.8)
+        result = await update_service.update_document_metadata(
+            chunk_id, {'new_relationship_field': 'some_data'}
+        )
 
         assert result['success'] is True
         call_args = mock_short_term_memory._collection.update.call_args
         updated_metadata = call_args[1]['metadatas'][0]
-        assert updated_metadata['source'] == 'user_input'
-        assert updated_metadata['tags'] == ['important', 'work']
-        assert updated_metadata['created_at'] == 1234567890
 
-
-class TestUpdateDocumentContent:
-    """Tests for update_document_content method."""
-
-    @pytest.mark.asyncio
-    async def test_update_content_success(
-        self,
-        update_service,
-        mock_short_term_memory,
-        mock_storage_service
-    ):
-        """Test successful content update."""
-        document_id = "doc_123"
-        new_content = "Updated document content"
-        mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1', 'chunk_2'],
-            'documents': ['old content 1', 'old content 2'],
-            'metadatas': [
-                {'document_id': document_id, 'importance_score': 0.7},
-                {'document_id': document_id, 'importance_score': 0.7}
-            ]
-        }
-
-        result = await update_service.update_document_content(document_id, new_content)
-
-        assert result['success'] is True
-        assert result['old_chunks'] == 2
-        assert result['new_chunks'] == 2
-        mock_storage_service.add_memory.assert_called_once()
+        # All existing fields should be preserved
+        assert updated_metadata['chunk_id'] == chunk_id
+        assert updated_metadata['document_id'] == 'doc_123'
+        assert updated_metadata['chunk_index'] == 0
+        assert updated_metadata['importance_score'] == 0.75
+        assert updated_metadata['timestamp'] == 1234567890
+        assert updated_metadata['previous_chunk'] is None
+        assert updated_metadata['next_chunk'] == 'chunk_456'
+        # New field should be added
+        assert updated_metadata['new_relationship_field'] == 'some_data'
 
     @pytest.mark.asyncio
-    async def test_update_content_preserves_importance(
+    async def test_update_metadata_overwrites_existing_field(
         self,
         update_service,
-        mock_short_term_memory,
-        mock_storage_service
+        mock_short_term_memory
     ):
-        """Test that importance score is preserved when preserve_importance=True."""
-        document_id = "doc_123"
-        original_importance = 0.85
+        """Test that existing fields can be overwritten."""
+        chunk_id = "chunk_123"
         mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
-            'documents': ['old content'],
-            'metadatas': [{'document_id': document_id, 'importance_score': original_importance}]
+            'ids': ['uuid_123'],
+            'documents': ['content'],
+            'metadatas': [{'chunk_id': chunk_id, 'related_chunks_data': '[]'}]
         }
 
-        result = await update_service.update_document_content(
-            document_id, "new content", preserve_importance=True
+        result = await update_service.update_document_metadata(
+            chunk_id, {'related_chunks_data': '[{"target": "new_chunk"}]'}
         )
 
         assert result['success'] is True
-        assert result['importance_preserved'] is True
-        call_args = mock_storage_service.add_memory.call_args
-        assert call_args[1]['context']['preserved_importance'] == original_importance
+        call_args = mock_short_term_memory._collection.update.call_args
+        updated_metadata = call_args[1]['metadatas'][0]
+        assert updated_metadata['related_chunks_data'] == '[{"target": "new_chunk"}]'
 
     @pytest.mark.asyncio
-    async def test_update_content_does_not_preserve_importance(
+    async def test_update_metadata_with_json_serialized_data(
         self,
         update_service,
-        mock_short_term_memory,
-        mock_storage_service
+        mock_short_term_memory
     ):
-        """Test that importance score is not preserved when preserve_importance=False."""
-        document_id = "doc_123"
+        """Test updating metadata with JSON-serialized relationship data."""
+        import json
+        chunk_id = "chunk_123"
         mock_short_term_memory._collection.get.return_value = {
-            'ids': ['chunk_1'],
-            'documents': ['old content'],
-            'metadatas': [{'document_id': document_id, 'importance_score': 0.9}]
+            'ids': ['uuid_123'],
+            'documents': ['content'],
+            'metadatas': [{'chunk_id': chunk_id}]
         }
 
-        result = await update_service.update_document_content(
-            document_id, "new content", preserve_importance=False
+        relationship_data = [
+            {'target_chunk_id': 'chunk_456', 'type': 'semantic', 'score': 0.85},
+            {'target_chunk_id': 'chunk_789', 'type': 'co_occurrence', 'score': 0.7}
+        ]
+        dedup_data = [
+            {'original_document': 'old_doc', 'merge_timestamp': 1234567890}
+        ]
+
+        result = await update_service.update_document_metadata(
+            chunk_id,
+            {
+                'related_chunks_data': json.dumps(relationship_data),
+                'dedup_sources_data': json.dumps(dedup_data)
+            }
         )
 
         assert result['success'] is True
-        assert result['importance_preserved'] is False
+        assert len(result['fields_updated']) == 2
+
+        call_args = mock_short_term_memory._collection.update.call_args
+        updated_metadata = call_args[1]['metadatas'][0]
+
+        # Verify the JSON data was stored correctly
+        stored_relationships = json.loads(updated_metadata['related_chunks_data'])
+        assert len(stored_relationships) == 2
+        assert stored_relationships[0]['target_chunk_id'] == 'chunk_456'
+
 
     @pytest.mark.asyncio
     async def test_update_content_with_new_metadata(

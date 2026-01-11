@@ -5,7 +5,7 @@ import logging
 import math
 import json
 import os
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Optional, Tuple
 import threading
 
 from .services import HierarchicalMemorySystem
@@ -31,12 +31,12 @@ class MaintenanceState:
 
     def _load_state(self) -> Dict[str, float]:
         """Load persisted state or return defaults."""
-        defaults = {
-            'last_cleanup': 0,
-            'last_stale_refs': 0,
-            'last_statistics': 0,
-            'last_aging_refresh': 0,
-            'last_deep_maintenance': 0,
+        defaults: Dict[str, float] = {
+            'last_cleanup': 0.0,
+            'last_stale_refs': 0.0,
+            'last_statistics': 0.0,
+            'last_aging_refresh': 0.0,
+            'last_deep_maintenance': 0.0,
         }
 
         try:
@@ -58,7 +58,7 @@ class MaintenanceState:
 
         return defaults
 
-    def save(self):
+    def save(self) -> None:
         """Persist current state to disk."""
         try:
             # Ensure directory exists
@@ -70,7 +70,7 @@ class MaintenanceState:
         except (OSError, IOError) as e:
             logging.warning(f"Could not save maintenance state: {e}")
 
-    def update(self, task_name: str, timestamp: float = None):
+    def update(self, task_name: str, timestamp: Optional[float] = None) -> None:
         """Update timestamp for a task and persist."""
         key = f'last_{task_name}'
         if key in self.timestamps:
@@ -144,7 +144,7 @@ class TTLManager:
         }
 
     def calculate_ttl(self, importance_score: float, access_count: int = 0,
-                      last_accessed: float = None) -> Tuple[str, float]:
+                      last_accessed: Optional[float] = None) -> Tuple[str, float]:
         """Calculate TTL for a document based on importance and usage.
 
         Args:
@@ -221,7 +221,7 @@ class TTLManager:
         if not ttl_expiry:
             return False  # No TTL set, don't expire
 
-        return current_time > ttl_expiry
+        return bool(current_time > ttl_expiry)
 
     def add_ttl_metadata(self, metadata: dict, importance_score: float) -> dict:
         """Add TTL metadata to a document.
@@ -270,7 +270,7 @@ class MemoryAging:
         self.minimum_score = aging_config.get('minimum_score', 0.1)  # Minimum score floor
         self.aging_enabled = aging_config.get('enabled', True)
 
-    def calculate_age_factor(self, timestamp: float, current_time: float = None) -> float:
+    def calculate_age_factor(self, timestamp: float, current_time: Optional[float] = None) -> float:
         """Calculate age decay factor for a memory.
 
         Args:
@@ -293,12 +293,12 @@ class MemoryAging:
         age_factor = math.exp(-self.decay_rate * age_days)
 
         # Apply minimum score floor
-        age_factor = max(age_factor, self.minimum_score)
+        age_factor = max(age_factor, float(self.minimum_score))
 
-        return age_factor
+        return float(age_factor)
 
     def apply_aging_to_score(self, original_score: float, timestamp: float,
-                             current_time: float = None) -> float:
+                             current_time: Optional[float] = None) -> float:
         """Apply aging to an importance score.
 
         Args:
@@ -313,7 +313,7 @@ class MemoryAging:
         aged_score = original_score * age_factor
 
         # Ensure we don't go below absolute minimum
-        return max(aged_score, self.minimum_score * 0.5)
+        return float(max(aged_score, float(self.minimum_score) * 0.5))
 
     def needs_score_refresh(self, metadata: dict, refresh_threshold_days: float = 7.0) -> bool:
         """Check if a document's importance score needs refreshing.
@@ -331,8 +331,8 @@ class MemoryAging:
         current_time = time.time()
         last_scored = metadata.get('importance_scored_at', metadata.get('timestamp', current_time))
 
-        days_since_scoring = (current_time - last_scored) / 86400
-        return days_since_scoring > refresh_threshold_days
+        days_since_scoring = (current_time - float(last_scored)) / 86400
+        return bool(days_since_scoring > refresh_threshold_days)
 
 
 class LifecycleManager:
@@ -368,7 +368,7 @@ class LifecycleManager:
         self.state = MaintenanceState(memory_system.persist_directory)
 
         # Background thread for maintenance
-        self._maintenance_thread = None
+        self._maintenance_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()  # Use Event for graceful shutdown
         # Legacy in-memory timestamps (kept for compatibility, but state.timestamps is authoritative)
         self._last_cleanup = self.state.get_last_run('cleanup')
@@ -412,7 +412,7 @@ class LifecycleManager:
 
         return metadata
 
-    async def cleanup_expired_documents(self, collection_name: str = None) -> Dict[str, Any]:
+    async def cleanup_expired_documents(self, collection_name: Optional[str] = None) -> Dict[str, Any]:
         """Clean up expired documents and superseded documents from collections.
 
         Args:
@@ -421,7 +421,7 @@ class LifecycleManager:
         Returns:
             Cleanup results and statistics
         """
-        results = {
+        results: Dict[str, Any] = {
             'cleaned_collections': [],
             'total_expired': 0,
             'total_superseded': 0,
@@ -519,7 +519,7 @@ class LifecycleManager:
         Returns:
             Dict mapping superseded document IDs to the document that supersedes them
         """
-        supersedes_map = {}
+        supersedes_map: Dict[str, str] = {}
 
         if not all_data.get('metadatas'):
             return supersedes_map
@@ -556,7 +556,7 @@ class LifecycleManager:
 
         return False
 
-    async def refresh_aging_scores(self, collection_name: str = None, sample_size: int = 100) -> Dict[str, Any]:
+    async def refresh_aging_scores(self, collection_name: Optional[str] = None, sample_size: int = 100) -> Dict[str, Any]:
         """Refresh aging scores for documents that need it.
 
         Args:
@@ -566,7 +566,7 @@ class LifecycleManager:
         Returns:
             Refresh results and statistics
         """
-        results = {
+        results: Dict[str, Any] = {
             'refreshed_collections': [],
             'total_refreshed': 0,
             'total_checked': 0,
@@ -616,7 +616,7 @@ class LifecycleManager:
 
         return results
 
-    def start_background_maintenance(self):
+    def start_background_maintenance(self) -> None:
         """Start background maintenance processes."""
         with self._state_lock:
             if not self.maintenance_enabled:
@@ -638,7 +638,7 @@ class LifecycleManager:
 
             logging.info("Background maintenance started")
 
-    def _run_overdue_maintenance(self):
+    def _run_overdue_maintenance(self) -> None:
         """Run any maintenance tasks that are overdue based on calendar time."""
         overdue = self.state.get_overdue_tasks()
 
@@ -671,7 +671,7 @@ class LifecycleManager:
             except Exception as e:
                 logging.error(f"Error running overdue task {task}: {e}")
 
-    def _run_stale_refs_cleanup(self):
+    def _run_stale_refs_cleanup(self) -> None:
         """Run stale reference cleanup (fast, safe to run frequently)."""
         if hasattr(self.memory_system, 'chunk_manager') and self.memory_system.chunk_manager:
             try:
@@ -681,7 +681,7 @@ class LifecycleManager:
             except Exception as e:
                 logging.warning(f"Stale refs cleanup error: {e}")
 
-    def stop_background_maintenance(self):
+    def stop_background_maintenance(self) -> None:
         """Stop background maintenance processes."""
         with self._state_lock:
             self._stop_event.set()  # Signal the thread to stop
@@ -698,7 +698,7 @@ class LifecycleManager:
             # Clear the thread reference
             self._maintenance_thread = None
 
-    def _maintenance_loop(self):
+    def _maintenance_loop(self) -> None:
         """Main maintenance loop running in background thread."""
         logging.info("Background maintenance loop started")
         while not self._stop_event.is_set():
@@ -761,7 +761,7 @@ class LifecycleManager:
 
         logging.info("Background maintenance loop exited")
 
-    def _run_async_safely(self, coro):
+    def _run_async_safely(self, coro: Any) -> Any:
         """Run an async coroutine safely, handling both async and sync contexts.
 
         If called from within a running event loop, runs the coroutine in a
@@ -781,7 +781,7 @@ class LifecycleManager:
             # No running loop - safe to use asyncio.run()
             return asyncio.run(coro)
 
-    def _scheduled_cleanup(self):
+    def _scheduled_cleanup(self) -> None:
         """Scheduled cleanup task."""
         logging.info("Running scheduled cleanup")
         try:
@@ -790,13 +790,13 @@ class LifecycleManager:
         except Exception as e:
             logging.error(f"Error during scheduled cleanup: {e}")
 
-    def _scheduled_statistics(self):
+    def _scheduled_statistics(self) -> None:
         """Scheduled statistics task."""
         logging.info("Running scheduled statistics collection")
         stats = self.memory_system.get_collection_stats()
         logging.info(f"Collection stats: {stats}")
 
-    def _scheduled_aging_refresh(self):
+    def _scheduled_aging_refresh(self) -> None:
         """Scheduled aging refresh task."""
         logging.info("Running scheduled aging refresh")
         try:
@@ -805,7 +805,7 @@ class LifecycleManager:
         except Exception as e:
             logging.error(f"Error during aging refresh: {e}")
 
-    def _scheduled_deep_maintenance(self):
+    def _scheduled_deep_maintenance(self) -> None:
         """Scheduled deep maintenance task."""
         logging.info("Running scheduled deep maintenance")
 

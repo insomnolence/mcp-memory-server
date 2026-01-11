@@ -290,6 +290,26 @@ class HierarchicalMemorySystem:
             document_id, new_content, new_metadata, preserve_importance
         )
 
+    async def update_document_metadata(
+        self,
+        chunk_id: str,
+        metadata_updates: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Update specific metadata fields on a chunk.
+
+        This method updates arbitrary metadata fields on a single chunk,
+        merging the new values with existing metadata. Used primarily for
+        persisting relationship data to ChromaDB.
+
+        Args:
+            chunk_id: The chunk_id (metadata field) to update
+            metadata_updates: Dictionary of metadata fields to update/add
+
+        Returns:
+            Dictionary with update results including success status
+        """
+        return await self._update_service.update_document_metadata(chunk_id, metadata_updates)
+
     # =========================================================================
     # Public API - Statistics and Analytics
     # =========================================================================

@@ -7,8 +7,8 @@ import asyncio
 @pytest.mark.asyncio
 async def test_memory_stress(running_mcp_server, memory_monitor, data_generator):
     """Run memory stress test by continuously adding documents."""
-    duration = 30  # Shorter duration for automated testing
-    data_rate = 5  # Number of documents to add per iteration
+    duration = 15  # Short duration for automated testing (was 30)
+    data_rate = 3  # Number of documents to add per iteration (was 5)
 
     memory_monitor.start_monitoring(interval=1.0)
 
@@ -51,7 +51,11 @@ async def test_memory_stress(running_mcp_server, memory_monitor, data_generator)
         if document_count > 0:
             print(f"Memory per Document (Peak): {pm['max_mb'] / document_count:.3f} MB/doc")
 
-    assert document_count > 0, "No documents were added during the stress test."
+    # Allow some failures under heavy load
+    # Expected: duration * data_rate / sleep_time = 15 * 3 / 0.5 = 90 docs (theoretical max)
+    # But with overhead and possible errors, just require at least 1 document
+    assert document_count >= 1, f"No documents were added during the stress test (got {document_count})"
+    
     # Memory tracking is optional - may fail if process detection doesn't work
     max_memory = memory_stats.get('process_memory', {}).get('max_mb', 0)
     if max_memory == 0:

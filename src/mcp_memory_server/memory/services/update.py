@@ -228,6 +228,82 @@ class DocumentUpdateService:
             result["message"] = f"Document {document_id} not found in any collection"
         return result
 
+    async def update_document_metadata(
+        self,
+        chunk_id: str,
+        metadata_updates: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Update specific metadata fields on a chunk.
+
+        This method updates arbitrary metadata fields on a single chunk,
+        merging the new values with existing metadata. Used primarily for
+        persisting relationship data to ChromaDB.
+
+        Args:
+            chunk_id: The chunk_id (metadata field) to update
+            metadata_updates: Dictionary of metadata fields to update/add
+
+        Returns:
+            Dictionary with update results including success status
+        """
+        result = {
+            "success": False,
+            "chunk_id": chunk_id,
+            "fields_updated": [],
+            "collection": None,
+            "message": ""
+        }
+
+        if not chunk_id or not isinstance(chunk_id, str):
+            result["message"] = "chunk_id must be a non-empty string"
+            return result
+
+        if not metadata_updates or not isinstance(metadata_updates, dict):
+            result["message"] = "metadata_updates must be a non-empty dictionary"
+            return result
+
+        # Search both collections for the chunk
+        for collection_name in ["short_term", "long_term"]:
+            collection = self._get_collection(collection_name)
+
+            try:
+                if hasattr(collection, '_collection'):
+                    # Query by chunk_id metadata field
+                    query_result = collection._collection.get(
+                        where={'chunk_id': chunk_id}
+                    )
+
+                    if query_result and query_result.get('ids') and len(query_result['ids']) > 0:
+                        chromadb_id = query_result['ids'][0]
+                        existing_metadata = query_result['metadatas'][0] if query_result.get('metadatas') else {}
+
+                        # Merge existing metadata with updates
+                        updated_metadata = existing_metadata.copy()
+                        updated_metadata.update(metadata_updates)
+                        updated_metadata['metadata_updated_at'] = time.time()
+
+                        # Update in ChromaDB
+                        collection._collection.update(
+                            ids=[chromadb_id],
+                            metadatas=[updated_metadata]
+                        )
+
+                        result["success"] = True
+                        result["fields_updated"] = list(metadata_updates.keys())
+                        result["collection"] = collection_name
+                        result["message"] = f"Updated {len(metadata_updates)} metadata fields on chunk {chunk_id}"
+
+                        logging.debug(f"Updated metadata for chunk {chunk_id}: {list(metadata_updates.keys())}")
+                        return result
+
+            except Exception as e:
+                logging.error(f"Error updating metadata for chunk {chunk_id} in {collection_name}: {e}")
+                result["message"] = f"Error updating metadata: {str(e)}"
+                return result
+
+        result["message"] = f"Chunk {chunk_id} not found in any collection"
+        return result
+
     async def update_document_content(
         self,
         document_id: str,

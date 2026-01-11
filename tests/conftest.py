@@ -21,6 +21,168 @@ if PROJECT_ROOT not in sys.path:
 from tests.fixtures.test_data_generator import data_generator  # noqa: F401, E402
 
 
+# =============================================================================
+# PRODUCTION SERVER SAFETY CHECK
+# =============================================================================
+# This prevents tests from accidentally running against a production database
+# when a production server is already running on the test port.
+
+# Markers that identify a test server (case-insensitive check)
+TEST_SERVER_MARKERS = [
+    "test mode",
+    "test-mode", 
+    "testing",
+    "-test",
+    "_test",
+    "test_",
+    "test-",
+]
+
+# Default ports used by the MCP server
+DEFAULT_TEST_PORT = 8080
+COMMON_MCP_PORTS = [8080, 8000, 3000]
+
+
+def _is_test_server(server_info: dict) -> bool:
+    """Check if server info indicates this is a test server.
+    
+    Args:
+        server_info: Dict containing server metadata (title, version, etc.)
+        
+    Returns:
+        True if the server appears to be a test server
+    """
+    # Check title field
+    title = server_info.get('title', '').lower()
+    version = server_info.get('version', '').lower()
+    
+    for marker in TEST_SERVER_MARKERS:
+        if marker.lower() in title or marker.lower() in version:
+            return True
+    
+    return False
+
+
+def _check_existing_server(host: str, port: int) -> dict:
+    """Check if a server is running and get its info.
+    
+    Args:
+        host: Server host
+        port: Server port
+        
+    Returns:
+        Dict with 'running' (bool), 'is_test' (bool), 'info' (dict)
+    """
+    result = {
+        'running': False,
+        'is_test': False,
+        'info': {},
+        'error': None
+    }
+    
+    try:
+        # Try health endpoint first
+        response = requests.get(f"http://{host}:{port}/health", timeout=2)
+        if response.status_code == 200:
+            result['running'] = True
+            result['info'] = response.json() if response.headers.get('content-type', '').startswith('application/json') else {}
+            result['is_test'] = _is_test_server(result['info'])
+            return result
+    except requests.exceptions.ConnectionError:
+        # No server running - this is fine
+        return result
+    except requests.exceptions.Timeout:
+        # Server might be overloaded but running
+        result['running'] = True
+        result['error'] = 'timeout'
+        return result
+    except Exception as e:
+        result['error'] = str(e)
+        return result
+    
+    # Try root endpoint as fallback
+    try:
+        response = requests.get(f"http://{host}:{port}/", timeout=2)
+        if response.status_code in [200, 404, 405]:  # Server is responding
+            result['running'] = True
+            # Try to extract server info from response
+            if response.headers.get('content-type', '').startswith('application/json'):
+                try:
+                    data = response.json()
+                    result['info'] = data
+                    result['is_test'] = _is_test_server(data)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    
+    return result
+
+
+def verify_no_production_server(host: str = "127.0.0.1", port: int = DEFAULT_TEST_PORT) -> None:
+    """Verify that no production server is running on the test port.
+    
+    This function should be called before starting tests to ensure we don't
+    accidentally run tests against a production database.
+    
+    Args:
+        host: Server host to check
+        port: Server port to check
+        
+    Raises:
+        pytest.fail: If a production server is detected
+    """
+    check = _check_existing_server(host, port)
+    
+    if not check['running']:
+        # No server running - safe to proceed
+        return
+    
+    if check['is_test']:
+        # Test server already running - this is fine
+        print(f"ℹ️  Test server already running on {host}:{port}")
+        return
+    
+    # Server running but not identified as test server - DANGER!
+    server_title = check['info'].get('title', 'Unknown')
+    server_version = check['info'].get('version', 'Unknown')
+    
+    error_message = f"""
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    ⚠️  PRODUCTION SERVER DETECTED! ⚠️                         ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  A server is already running on {host}:{port:<5}                              ║
+║  that does NOT appear to be a test server.                                   ║
+║                                                                              ║
+║  Server Info:                                                                ║
+║    Title:   {server_title:<60} ║
+║    Version: {server_version:<60} ║
+║                                                                              ║
+║  Running tests against a production server could:                            ║
+║    • Corrupt or delete production data                                       ║
+║    • Create test data in production                                          ║
+║    • Cause unexpected behavior for production users                          ║
+║                                                                              ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  TO FIX THIS:                                                                ║
+║                                                                              ║
+║  Option 1: Stop the production server                                        ║
+║    $ pkill -f "mcp_memory_server"                                            ║
+║    $ pkill -f "uvicorn.*mcp"                                                 ║
+║                                                                              ║
+║  Option 2: Use a different port for tests                                    ║
+║    Set MCP_TEST_PORT environment variable to a different port                ║
+║                                                                              ║
+║  Option 3: Mark your server as a test server                                 ║
+║    Set server.title to include "Test Mode" or "Testing"                      ║
+║    Or set server.version to include "-test"                                  ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+"""
+    pytest.fail(error_message)
+
+
 @pytest.fixture(scope="session")
 def test_environment_cleanup():
     """Fixture to clean up test environments at the end of the test session."""
@@ -32,12 +194,19 @@ def test_environment_cleanup():
 @pytest.fixture(scope="session")
 def shared_test_env():
     """Create a shared test environment with single test database for all tests."""
+    # Get port from environment or use default
+    test_port = int(os.environ.get('MCP_TEST_PORT', DEFAULT_TEST_PORT))
+    
+    # SAFETY CHECK: Verify no production server is running on the test port
+    # This prevents accidentally running tests against production data
+    verify_no_production_server(port=test_port)
+    
     # Set up test environment with deduplication enabled by default
     env = setup_test_environment(
         test_name="shared_test_session",
         enable_deduplication=True,
         ttl_fast_mode=True,
-        port=8080  # Use fixed port for shared environment
+        port=test_port  # Use port from environment or default
     )
 
     yield env
@@ -162,6 +331,7 @@ class MCPServerTester:
         self.port = server_port
         self.server_process = None
         self.base_url = f"http://{server_host}:{server_port}"
+        self._async_client = None  # Persistent async client for connection reuse
 
     def start_server(self, config_file=None):
         """Start the MCP server with enhanced error handling"""
@@ -174,7 +344,7 @@ class MCPServerTester:
                 return False
 
             cmd = [
-                'python3', '-m', 'uvicorn',
+                sys.executable, '-m', 'uvicorn',
                 'src.mcp_memory_server.main:app',
                 '--host', self.host,
                 '--port', str(self.port),
@@ -236,6 +406,11 @@ class MCPServerTester:
 
     def stop_server(self):
         """Stop the MCP server"""
+        # Close the async client if it exists
+        if self._async_client is not None:
+            # Note: Can't await in sync context, but httpx handles cleanup on garbage collection
+            self._async_client = None
+        
         if self.server_process:
             self.server_process.terminate()
             try:
@@ -244,6 +419,54 @@ class MCPServerTester:
                 self.server_process.kill()
                 self.server_process.wait()
             print("✓ MCP Server stopped")
+    
+    async def _get_async_client(self):
+        """Get or create a persistent async client for connection reuse.
+        
+        This significantly improves performance under load by reusing connections
+        instead of creating a new connection for each request.
+        
+        The client is recreated if the event loop has changed (which happens
+        between pytest async tests).
+        """
+        import asyncio
+        current_loop = asyncio.get_event_loop()
+        
+        # Check if we need to recreate the client (new event loop or closed client)
+        need_new_client = (
+            self._async_client is None or 
+            self._async_client.is_closed or
+            getattr(self, '_client_loop', None) is not current_loop
+        )
+        
+        if need_new_client:
+            # Close old client if it exists and isn't already closed
+            if self._async_client is not None and not self._async_client.is_closed:
+                try:
+                    await self._async_client.aclose()
+                except Exception:
+                    pass  # Ignore errors closing old client
+            
+            # Configure with higher limits for performance testing
+            limits = httpx.Limits(
+                max_connections=100,
+                max_keepalive_connections=50,
+                keepalive_expiry=30.0
+            )
+            self._async_client = httpx.AsyncClient(
+                base_url=self.base_url,
+                limits=limits,
+                timeout=30.0  # Longer timeout for heavy operations
+            )
+            self._client_loop = current_loop
+            
+        return self._async_client
+    
+    async def close_async_client(self):
+        """Explicitly close the async client."""
+        if self._async_client is not None:
+            await self._async_client.aclose()
+            self._async_client = None
 
     def is_server_running(self):
         """Check if server is responding"""
@@ -257,7 +480,10 @@ class MCPServerTester:
             return False
 
     async def call_mcp_tool(self, tool_name, params=None):
-        """Call an MCP tool via HTTP asynchronously."""
+        """Call an MCP tool via HTTP asynchronously.
+        
+        Uses a persistent connection pool for better performance under load.
+        """
         try:
             payload = {
                 "jsonrpc": "2.0",
@@ -269,13 +495,13 @@ class MCPServerTester:
                 }
             }
 
-            async with httpx.AsyncClient(base_url=self.base_url) as client:
-                response = await client.post(
-                    "/",
-                    json=payload,
-                    headers={"Content-Type": "application/json"},
-                    timeout=10
-                )
+            # Use persistent client for connection reuse
+            client = await self._get_async_client()
+            response = await client.post(
+                "/",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+            )
 
             response.raise_for_status()  # Raise an exception for 4xx or 5xx responses
             return response.json()
@@ -298,8 +524,12 @@ def mcp_server_tester():
 
 
 @pytest.fixture(scope="session")
-def running_mcp_server(mcp_server_tester, shared_test_env):
-    """Starts the MCP server once for the entire test session with shared test database."""
+def running_mcp_server(mcp_server_tester, shared_test_env, production_server_check, check_server_dependencies):
+    """Starts the MCP server once for the entire test session with shared test database.
+    
+    This fixture depends on production_server_check to ensure we don't accidentally
+    run tests against a production database.
+    """
     # Use the shared test environment config
     config_path = shared_test_env['config_path']
     port = shared_test_env['port']
@@ -336,9 +566,13 @@ def memory_monitor():
     monitor.stop_monitoring()
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def check_server_dependencies():
-    """Check if server dependencies are available before running integration tests."""
+    """Check if server dependencies are available before running integration tests.
+    
+    Note: This fixture is NOT autouse - it's only used by integration tests that
+    depend on running_mcp_server.
+    """
     required_modules = ['fastapi', 'uvicorn']
     missing = []
 
@@ -352,3 +586,33 @@ def check_server_dependencies():
         pytest.skip(f"Server dependencies not available: {missing}. Install with: pip install {' '.join(missing)}")
 
     return True
+
+
+@pytest.fixture(scope="session")
+def production_server_check():
+    """Check for production servers before running integration tests.
+    
+    This fixture is used by integration tests that need a running server.
+    It provides immediate feedback if a production server is detected.
+    
+    Note: This fixture is NOT autouse - unit tests don't need this check
+    since they don't use a running server.
+    """
+    test_port = int(os.environ.get('MCP_TEST_PORT', DEFAULT_TEST_PORT))
+    
+    # Check all common ports for running servers
+    for port in COMMON_MCP_PORTS:
+        if port == test_port:
+            # The main check will handle the test port
+            continue
+        
+        check = _check_existing_server("127.0.0.1", port)
+        if check['running'] and not check['is_test']:
+            server_title = check['info'].get('title', 'Unknown')
+            print(f"\n⚠️  Warning: Non-test server detected on port {port}: {server_title}")
+            print(f"   Tests will use port {test_port}. Ensure this is correct.\n")
+    
+    # Main safety check for the actual test port
+    verify_no_production_server(port=test_port)
+    
+    yield

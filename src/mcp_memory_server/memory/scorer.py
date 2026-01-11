@@ -1,7 +1,7 @@
 import time
 import math
 import re
-from typing import Dict
+from typing import Any, Dict, Optional
 
 
 class DomainPatternEngine:
@@ -41,7 +41,7 @@ class DomainPatternEngine:
 
         return results
 
-    def analyze_permanence(self, content: str, metadata: dict = None) -> float:
+    def analyze_permanence(self, content: str, metadata: Optional[Dict[str, Any]] = None) -> float:
         """Analyze content for permanence triggers.
 
         Args:
@@ -169,7 +169,7 @@ class MemoryImportanceScorer:
         self.legacy_content_scoring = scoring_config.get('content_scoring')
         self.legacy_permanence_factors = scoring_config.get('permanence_factors')
 
-    def calculate_importance(self, content: str, metadata: dict = None, context: dict = None) -> float:
+    def calculate_importance(self, content: str, metadata: Optional[Dict[str, Any]] = None, context: Optional[Dict[str, Any]] = None) -> float:
         """Calculate importance score for new memory entries.
 
         Args:
@@ -224,7 +224,7 @@ class MemoryImportanceScorer:
 
         return min(1.0, total_score)
 
-    def _calculate_legacy_bonus(self, content: str, metadata: dict, context: dict) -> float:
+    def _calculate_legacy_bonus(self, content: str, metadata: Optional[Dict[str, Any]], context: Optional[Dict[str, Any]]) -> float:
         """Calculate legacy bonus scores for backward compatibility.
 
         Args:
@@ -261,12 +261,13 @@ class MemoryImportanceScorer:
                 legacy_bonus += self.legacy_content_scoring.get('important_bonus', 0)
 
         # Language importance
-        language = metadata.get('language', 'text')
-        if language != 'text':
-            legacy_bonus += self.legacy_content_scoring.get('language_bonus', 0)
+        if metadata:
+            language = metadata.get('language', 'text')
+            if language != 'text':
+                legacy_bonus += self.legacy_content_scoring.get('language_bonus', 0)
 
         # Legacy permanence factors
-        if self.legacy_permanence_factors:
+        if self.legacy_permanence_factors and metadata:
             content_type = metadata.get('type', '')
             if content_type in self.legacy_permanence_factors:
                 legacy_bonus += self.legacy_permanence_factors[content_type]
@@ -277,7 +278,7 @@ class MemoryImportanceScorer:
 
         return legacy_bonus
 
-    def calculate_retrieval_score(self, memory_data: dict, query: str, current_time: float = None) -> float:
+    def calculate_retrieval_score(self, memory_data: Dict[str, Any], query: str, current_time: Optional[float] = None) -> float:
         """Calculate dynamic retrieval score for existing memories.
 
         Args:
