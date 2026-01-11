@@ -7,10 +7,13 @@ from src.mcp_memory_server.deduplication.deduplicator import MemoryDeduplicator
 from src.mcp_memory_server.deduplication.similarity import SimilarityCalculator
 
 # Fixture for a simple embedding model mock
+
+
 @pytest.fixture
 def mock_embedding_model():
     mock_model = Mock()
     # Mock a consistent embedding for a given text for testing purposes
+
     def get_embedding_side_effect(text):
         if "apple" in text:
             return np.array([0.1, 0.2, 0.3])
@@ -21,16 +24,20 @@ def mock_embedding_model():
         elif "car" in text:
             return np.array([0.9, 0.8, 0.7])
         else:
-            return np.random.rand(3) # Random for other texts
+            return np.random.rand(3)  # Random for other texts
     mock_model.encode.side_effect = get_embedding_side_effect
     return mock_model
 
 # Fixture for SimilarityCalculator
+
+
 @pytest.fixture
 def similarity_calculator():
     return SimilarityCalculator(similarity_threshold=0.8)
 
 # Fixture for MemoryDeduplicator
+
+
 @pytest.fixture
 def memory_deduplicator(mock_embedding_model):
     # Mock chunk_manager and advanced_features as they are external dependencies
@@ -39,11 +46,14 @@ def memory_deduplicator(mock_embedding_model):
     mock_advanced_features.apply_domain_aware_thresholds.return_value = [(0.8, 'default')]
     mock_advanced_features.apply_semantic_clustering.return_value = {'clusters': {}}
 
-    with patch('src.mcp_memory_server.deduplication.deduplicator.SimilarityCalculator', autospec=True) as MockSimilarityCalculator:
+    with patch(
+        'src.mcp_memory_server.deduplication.deduplicator.SimilarityCalculator', autospec=True
+    ) as MockSimilarityCalculator:
         # Ensure the mocked SimilarityCalculator is used by Deduplicator
         mock_sim_calc_instance = MockSimilarityCalculator.return_value
-        mock_sim_calc_instance.calculate_similarity.side_effect = lambda e1, e2: np.dot(e1, e2) / (np.linalg.norm(e1) * np.linalg.norm(e2))
-        mock_sim_calc_instance.find_duplicates_batch.return_value = [] # Default mock behavior
+        mock_sim_calc_instance.calculate_similarity.side_effect = lambda e1, e2: np.dot(
+            e1, e2) / (np.linalg.norm(e1) * np.linalg.norm(e2))
+        mock_sim_calc_instance.find_duplicates_batch.return_value = []  # Default mock behavior
 
         deduplicator = MemoryDeduplicator(
             deduplication_config={'enabled': True, 'similarity_threshold': 0.8},
@@ -51,7 +61,7 @@ def memory_deduplicator(mock_embedding_model):
         )
         # Manually set the mocked advanced_features after initialization
         deduplicator.advanced_features = mock_advanced_features
-        deduplicator.similarity_calculator = mock_sim_calc_instance # Ensure it uses our mock
+        deduplicator.similarity_calculator = mock_sim_calc_instance  # Ensure it uses our mock
         return deduplicator
 
 
@@ -87,18 +97,18 @@ class TestSimilarityCalculator:
             {'id': '2', 'page_content': 'a green apple', 'embedding': emb_fruit2},
             {'id': '3', 'page_content': 'a fast car', 'embedding': emb_car},
         ]
-        
+
         duplicates = similarity_calculator.find_duplicates_batch(docs, threshold=0.9)
-        
+
         # The apple embeddings should be similar enough to be detected as duplicates
         expected_sim = similarity_calculator.calculate_similarity(emb_fruit1, emb_fruit2)
         assert expected_sim >= 0.9  # Ensure our test embeddings are actually similar
-        
+
         # Should find exactly one duplicate pair (the two apple embeddings)
         assert len(duplicates) == 1
         duplicate_pair = duplicates[0]
         assert duplicate_pair[0]['id'] in ['1', '2']
-        assert duplicate_pair[1]['id'] in ['1', '2'] 
+        assert duplicate_pair[1]['id'] in ['1', '2']
         assert duplicate_pair[0]['id'] != duplicate_pair[1]['id']  # Different IDs
         assert duplicate_pair[2] == pytest.approx(expected_sim, rel=1e-3)
 
@@ -184,7 +194,10 @@ class TestMemoryDeduplicator:
         mock_duplicate_pair = ({'id': '1', 'page_content': 'apple'}, {'id': '2', 'page_content': 'apple_similar'}, 0.95)
         with patch.object(memory_deduplicator, '_find_duplicates_advanced', return_value=[mock_duplicate_pair]):
             # Mock the document_merger.batch_merge_duplicates
-            with patch.object(memory_deduplicator.document_merger, 'batch_merge_duplicates', return_value=[{'id': 'merged_doc'}]) as mock_merge:
+            with patch.object(
+                memory_deduplicator.document_merger, 'batch_merge_duplicates',
+                return_value=[{'id': 'merged_doc'}]
+            ) as mock_merge:
                 results = await memory_deduplicator.deduplicate_collection(mock_collection, dry_run=False)
                 assert results['merged_documents'] == 1
                 assert results['message'].startswith('Merged')

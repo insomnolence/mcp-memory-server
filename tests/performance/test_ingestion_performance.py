@@ -3,6 +3,7 @@ import time
 import asyncio
 import random
 
+
 @pytest.mark.performance
 @pytest.mark.asyncio
 async def test_ingestion_performance(running_mcp_server, data_generator):
@@ -23,7 +24,7 @@ async def test_ingestion_performance(running_mcp_server, data_generator):
                 "content": doc['content'],
                 "metadata": doc['metadata']
             }))
-        
+
         results = await asyncio.gather(*tasks)
 
         for result in results:
@@ -37,7 +38,7 @@ async def test_ingestion_performance(running_mcp_server, data_generator):
 
     tps = successful_adds / duration if duration > 0 else 0
 
-    print(f"\n--- Ingestion Performance ---")
+    print("\n--- Ingestion Performance ---")
     print(f"Total Documents: {num_documents}")
     print(f"Successful Adds: {successful_adds}")
     print(f"Duration: {duration:.2f} seconds")
@@ -45,6 +46,7 @@ async def test_ingestion_performance(running_mcp_server, data_generator):
 
     assert successful_adds == num_documents, "Not all documents were successfully added."
     assert tps > 0, "Ingestion rate is zero, indicating a problem."
+
 
 @pytest.mark.performance
 @pytest.mark.asyncio
@@ -59,7 +61,7 @@ async def test_query_load_performance(running_mcp_server, data_generator):
             "metadata": doc['metadata']
         })
         assert "error" not in add_result, f"Failed to add document for query test: {add_result.get('error')}"
-    await asyncio.sleep(2) # Give ChromaDB time to index
+    await asyncio.sleep(2)  # Give ChromaDB time to index
 
     num_queries = 100
     concurrent_queries = 10
@@ -82,7 +84,7 @@ async def test_query_load_performance(running_mcp_server, data_generator):
                 "query": query_text,
                 "k": 3
             }))
-        
+
         results = await asyncio.gather(*tasks)
 
         for result in results:
@@ -100,7 +102,7 @@ async def test_query_load_performance(running_mcp_server, data_generator):
     qps = successful_queries / duration if duration > 0 else 0
     avg_response_time_ms = total_response_time / successful_queries if successful_queries > 0 else 0
 
-    print(f"\n--- Query Load Performance ---")
+    print("\n--- Query Load Performance ---")
     print(f"Total Queries: {num_queries}")
     print(f"Successful Queries: {successful_queries}")
     print(f"Duration: {duration:.2f} seconds")

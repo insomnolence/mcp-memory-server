@@ -1,15 +1,16 @@
 import pytest
 import math
 import time
-from unittest.mock import Mock
 
 from src.mcp_memory_server.memory.scorer import MemoryImportanceScorer, DomainPatternEngine
 
 # Fixture for a basic scoring configuration
+
+
 @pytest.fixture
 def basic_scoring_config():
     return {
-        'decay_constant': 86400, # 1 day
+        'decay_constant': 86400,  # 1 day
         'max_access_count': 100,
         'scoring_weights': {
             'semantic': 0.4,
@@ -19,7 +20,7 @@ def basic_scoring_config():
         },
         'base_scoring': {
             'length_normalization': 1000,
-            'max_length_score': 0.5 # Max 0.5 from content length
+            'max_length_score': 0.5  # Max 0.5 from content length
         },
         'domain_patterns': {
             'patterns': {
@@ -34,6 +35,8 @@ def basic_scoring_config():
     }
 
 # Fixture for MemoryImportanceScorer
+
+
 @pytest.fixture
 def importance_scorer(basic_scoring_config):
     return MemoryImportanceScorer(basic_scoring_config)
@@ -79,8 +82,8 @@ class TestDomainPatternEngine:
             }
         }
         engine = DomainPatternEngine(config)
-        assert engine.analyze_content("This has one and two") == {'weighted_pattern': pytest.approx(2/3 * 1.0)}
-        assert engine.analyze_content("This has one") == {'weighted_pattern': pytest.approx(1/3 * 1.0)}
+        assert engine.analyze_content("This has one and two") == {'weighted_pattern': pytest.approx(2 / 3 * 1.0)}
+        assert engine.analyze_content("This has one") == {'weighted_pattern': pytest.approx(1 / 3 * 1.0)}
 
     def test_analyze_permanence(self):
         config = {
@@ -93,7 +96,7 @@ class TestDomainPatternEngine:
         engine = DomainPatternEngine(config)
         assert engine.analyze_permanence("This is critical information") == 0.5
         assert engine.analyze_permanence("Normal content") == 0.0
-        assert engine.analyze_permanence("", metadata={'permanence_flag': 'critical_flag'}) == 0.5 # Test metadata flag
+        assert engine.analyze_permanence("", metadata={'permanence_flag': 'critical_flag'}) == 0.5  # Test metadata flag
 
     def test_invalid_pattern_config_handling(self):
         # Test with a pattern missing 'keywords' or 'regex_patterns'
@@ -131,9 +134,9 @@ class TestMemoryImportanceScorer:
 
     def test_calculate_importance_base_content_length(self, importance_scorer):
         # Content length directly contributes: length/normalization_factor
-        content = "a" * 500 # 500/1000 = 0.5
+        content = "a" * 500  # 500/1000 = 0.5
         score = importance_scorer.calculate_importance(content)
-        assert score == pytest.approx(0.5) # Direct length score: 500/1000 = 0.5
+        assert score == pytest.approx(0.5)  # Direct length score: 500/1000 = 0.5
 
     def test_calculate_importance_with_domain_patterns(self, importance_scorer):
         content = "This code defines a new class and handles an exception."
@@ -176,13 +179,13 @@ class TestMemoryImportanceScorer:
             'domain_patterns': {
                 'patterns': {
                     'high_bonus_1': {'keywords': ['a'], 'bonus': 0.5},
-                    'high_bonus_2': {'keywords': ['b'], 'bonus': 0.5}, 
+                    'high_bonus_2': {'keywords': ['b'], 'bonus': 0.5},
                     'high_bonus_3': {'keywords': ['c'], 'bonus': 0.5}
                 }
             }
         }
         scorer = MemoryImportanceScorer(config)
-        content = "a b c" * 1000 # Very long content to max out length score
+        content = "a b c" * 1000  # Very long content to max out length score
         score = scorer.calculate_importance(content)
         # Score should be capped at 1.0 regardless of individual components
         assert score == pytest.approx(1.0)
@@ -190,11 +193,11 @@ class TestMemoryImportanceScorer:
     def test_calculate_retrieval_score(self, importance_scorer):
         memory_data = {
             'metadata': {
-                'timestamp': time.time() - 86400, # 1 day old
+                'timestamp': time.time() - 86400,  # 1 day old
                 'access_count': 10,
                 'importance_score': 0.8
             },
-            'distance': 0.1 # High semantic similarity
+            'distance': 0.1  # High semantic similarity
         }
         query = "test query"
         current_time = time.time()
@@ -208,8 +211,10 @@ class TestMemoryImportanceScorer:
         #       = 0.36 + 0.11034 + 0.02 + 0.08 = 0.57034
         expected_score = (
             (1.0 - memory_data['distance']) * importance_scorer.scoring_weights['semantic'] +
-            math.exp(-(current_time - memory_data['metadata']['timestamp']) / importance_scorer.decay_constant) * importance_scorer.scoring_weights['recency'] +
-            min(memory_data['metadata']['access_count'] / importance_scorer.max_access_count, 1.0) * importance_scorer.scoring_weights['frequency'] +
+            math.exp(-(current_time - memory_data['metadata']['timestamp']) / importance_scorer.decay_constant) *
+            importance_scorer.scoring_weights['recency'] +
+            min(memory_data['metadata']['access_count'] / importance_scorer.max_access_count, 1.0) *
+            importance_scorer.scoring_weights['frequency'] +
             memory_data['metadata']['importance_score'] * importance_scorer.scoring_weights['importance']
         )
 
@@ -225,12 +230,12 @@ class TestMemoryImportanceScorer:
 
     def test_calculate_importance_empty_content(self, importance_scorer):
         score = importance_scorer.calculate_importance("")
-        assert score == pytest.approx(0.0) # Empty content should yield 0 importance
+        assert score == pytest.approx(0.0)  # Empty content should yield 0 importance
 
     def test_calculate_importance_missing_metadata_context(self, importance_scorer):
         # Should not raise an error, should use defaults
         score = importance_scorer.calculate_importance("some content", metadata=None, context=None)
-        assert score > 0.0 # Should still get some score from content length
+        assert score > 0.0  # Should still get some score from content length
 
     def test_calculate_retrieval_score_missing_metadata_keys(self, importance_scorer):
         memory_data_incomplete = {
@@ -258,3 +263,57 @@ class TestMemoryImportanceScorer:
         # Should not raise an error, semantic score should default or be handled
         score = importance_scorer.calculate_retrieval_score(memory_data_no_distance, query, current_time)
         assert score >= 0.0
+
+    def test_calculate_importance_is_important_false_caps_score(self):
+        """Test that is_important: False caps score below permanent tier (0.95)."""
+        # Create scorer with config that would normally produce score > 0.95
+        config = {
+            'base_scoring': {
+                'length_normalization': 1000,
+                'max_length_score': 1.0  # Long content will get 1.0
+            },
+            'domain_patterns': {
+                'patterns': {},
+                'permanence_triggers': {}
+            }
+        }
+        scorer = MemoryImportanceScorer(config)
+
+        # Long content that would normally score 1.0
+        content = "a" * 2000  # Well over normalization threshold
+
+        # Without is_important flag, should get 1.0
+        score_no_flag = scorer.calculate_importance(content, context=None)
+        assert score_no_flag == pytest.approx(1.0)
+
+        # With is_important: True, should still get 1.0
+        score_important_true = scorer.calculate_importance(content, context={'is_important': True})
+        assert score_important_true == pytest.approx(1.0)
+
+        # With is_important: False, should be capped at 0.94
+        score_important_false = scorer.calculate_importance(content, context={'is_important': False})
+        assert score_important_false == pytest.approx(0.94)
+
+    def test_calculate_importance_is_important_false_does_not_affect_low_scores(self):
+        """Test that is_important: False doesn't reduce already-low scores."""
+        config = {
+            'base_scoring': {
+                'length_normalization': 1000,
+                'max_length_score': 1.0
+            },
+            'domain_patterns': {
+                'patterns': {},
+                'permanence_triggers': {}
+            }
+        }
+        scorer = MemoryImportanceScorer(config)
+
+        # Short content that scores below 0.94
+        content = "short"  # 5 chars = 0.005 score
+
+        # With is_important: False, score should remain unchanged (already below cap)
+        score_no_flag = scorer.calculate_importance(content, context=None)
+        score_important_false = scorer.calculate_importance(content, context={'is_important': False})
+
+        assert score_no_flag == score_important_false
+        assert score_important_false < 0.94

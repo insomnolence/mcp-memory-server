@@ -53,6 +53,8 @@ logs/
 # Database files
 data/memory/*
 !data/memory/.gitkeep
+data/*/
+!data/.gitkeep
 *.sqlite3
 *.db
 
@@ -91,8 +93,15 @@ claude-code-settings.json
 !README.md
 !REPORT.md
 
+# Ignore shell scripts in root (local startup scripts)
+/*.sh
+
 # Configuration files
 config.json
+
+# Domain configs (project-specific, not tracked)
+config/domains/*
+!config/domains/.gitkeep
 
 # Local config overrides and backups
 config.local.json

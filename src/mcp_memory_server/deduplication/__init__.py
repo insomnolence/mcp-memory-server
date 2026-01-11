@@ -9,7 +9,7 @@ and enhanced with the system improvements from REWORK.md.
 
 Components:
 - deduplicator.py: Main deduplication logic and batch processing
-- similarity.py: Cosine similarity utilities and calculations  
+- similarity.py: Cosine similarity utilities and calculations
 - merger.py: Metadata merging logic and document selection
 
 Implementation developed with assistance from Claude Code.

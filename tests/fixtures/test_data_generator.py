@@ -2,58 +2,59 @@ import pytest
 import random
 import time
 import json
-import string
-from typing import Dict, List, Any
+
 
 @pytest.fixture(scope="session")
 def data_generator():
     return DataGenerator()
 
+
 class DataGenerator:
     """Generate realistic test data for various scenarios"""
-    
+
     def __init__(self):
         self.code_keywords = ['function', 'class', 'import', 'return', 'def', 'if', 'for', 'while', 'try', 'except']
         self.text_keywords = ['the', 'and', 'or', 'but', 'however', 'therefore', 'because', 'since', 'when', 'where']
         self.data_keywords = ['data', 'json', 'csv', 'table', 'row', 'column', 'field', 'value', 'record', 'database']
         self.doc_keywords = ['guide', 'documentation', 'tutorial', 'example', 'howto', 'readme', 'manual', 'reference']
-        
+
     def generate_code_content(self, base_content="", similarity_level=0.8):
         """Generate code-like content with controlled similarity"""
         if not base_content:
             # Create base code content
             functions = ['process_data', 'calculate_result', 'validate_input', 'format_output', 'handle_error']
             variables = ['data', 'result', 'config', 'response', 'params']
-            
+
             content = f"""
 def {random.choice(functions)}({', '.join(random.sample(variables, 2))}):
     '''Process {random.choice(['user input', 'data records', 'configuration', 'response data'])}'''
-    
-    {random.choice(variables)} = {random.choice(['{{}}', '[]', 'None', '""'])} 
-    
+
+    {random.choice(variables)} = {random.choice(['{{}}', '[]', 'None', '""'])}
+
     if {random.choice(variables)}:
         for item in {random.choice(variables)}:
             {random.choice(['print(item)', 'process(item)', 'validate(item)', 'store(item)'])}
-            
+
     return {random.choice(variables)}
 
 # {random.choice(['Configuration', 'Constants', 'Settings'])}
 {random.choice(['CONFIG', 'SETTINGS', 'PARAMS'])} = {{
     '{random.choice(['threshold', 'limit', 'timeout', 'retry'])}': {random.randint(1, 100)},
     '{random.choice(['enabled', 'debug', 'verbose', 'strict'])}': {random.choice(['True', 'False'])},
-    '{random.choice(['path', 'url', 'endpoint', 'target'])}': "{random.choice(['localhost', 'example.com', '/api/v1', '/data'])}"
+    '{random.choice(['path', 'url', 'endpoint', 'target'])}': \
+"{random.choice(['localhost', 'example.com', '/api/v1', '/data'])}"
 }}
 """
         else:
             # Modify existing content based on similarity level
             lines = base_content.strip().split('\n')
             num_changes = int(len(lines) * (1 - similarity_level))
-            
+
             for _ in range(num_changes):
                 if lines:
                     line_idx = random.randint(0, len(lines) - 1)
                     line = lines[line_idx]
-                    
+
                     # Make small modifications
                     if 'def ' in line:
                         line = line.replace('def ', 'def new_')
@@ -63,23 +64,25 @@ def {random.choice(functions)}({', '.join(random.sample(variables, 2))}):
                             line = f"{parts[0]}= {random.choice(['modified_value', 'updated_data', 'new_result'])}"
                     elif random.random() < 0.3:
                         line = f"    # Modified: {line.strip()}"
-                        
+
                     lines[line_idx] = line
-            
+
             content = '\n'.join(lines)
-            
+
         return content
-    
+
     def generate_text_content(self, base_content="", similarity_level=0.8):
         """Generate text content with controlled similarity"""
         topics = ['machine learning', 'data analysis', 'software development', 'project management', 'system design']
-        
+
         if not base_content:
             topic = random.choice(topics)
             content = f"""
 # Understanding {topic.title()}
 
-{topic.title()} is a crucial aspect of modern technology that involves {random.choice(['analyzing', 'processing', 'managing', 'optimizing'])} {random.choice(['data', 'information', 'systems', 'processes'])}. 
+{topic.title()} is a crucial aspect of modern technology that involves \
+{random.choice(['analyzing', 'processing', 'managing', 'optimizing'])} \
+{random.choice(['data', 'information', 'systems', 'processes'])}.
 
 ## Key Concepts
 
@@ -97,13 +100,15 @@ When working with {topic}, it's important to:
 
 ## Conclusion
 
-{topic.title()} remains an essential skill for {random.choice(['developers', 'analysts', 'engineers', 'professionals'])} working in {random.choice(['technology', 'business', 'research', 'industry'])}
+{topic.title()} remains an essential skill for \
+{random.choice(['developers', 'analysts', 'engineers', 'professionals'])} \
+working in {random.choice(['technology', 'business', 'research', 'industry'])}
 """
         else:
             # Modify existing content
             sentences = base_content.replace('\n', ' ').split('.')
             num_changes = int(len(sentences) * (1 - similarity_level))
-            
+
             for _ in range(num_changes):
                 if sentences:
                     idx = random.randint(0, len(sentences) - 1)
@@ -114,13 +119,14 @@ When working with {topic}, it's important to:
                         if len(words) > 3:
                             # Replace some words
                             replace_idx = random.randint(1, len(words) - 2)
-                            words[replace_idx] = random.choice(['improved', 'enhanced', 'optimized', 'advanced', 'modified'])
+                            words[replace_idx] = random.choice(
+                                ['improved', 'enhanced', 'optimized', 'advanced', 'modified'])
                         sentences[idx] = ' '.join(words)
-            
+
             content = '. '.join(sentences)
-            
+
         return content
-    
+
     def generate_data_content(self, base_content="", similarity_level=0.8):
         """Generate data-like content"""
         if not base_content:
@@ -152,20 +158,21 @@ When working with {topic}, it's important to:
                             elif isinstance(data[key], str):
                                 data[key] = f"modified_{data[key]}"
                 return json.dumps(data, indent=2)
-            except:
+            except BaseException:
                 return base_content
-    
+
     def generate_documentation_content(self, base_content="", similarity_level=0.8):
         """Generate documentation-like content"""
         if not base_content:
             components = ['API', 'Database', 'Service', 'Module', 'Component']
             component = random.choice(components)
-            
+
             content = f"""
 # {component} Documentation
 
 ## Overview
-The {component.lower()} provides functionality for {random.choice(['data processing', 'user management', 'system integration', 'performance monitoring']) }.
+The {component.lower()} provides functionality for \
+{random.choice(['data processing', 'user management', 'system integration', 'performance monitoring'])}.
 
 ## Installation
 ```bash
@@ -195,7 +202,7 @@ See the examples directory for complete usage examples.
             # Modify documentation
             lines = base_content.split('\n')
             num_changes = int(len(lines) * (1 - similarity_level))
-            
+
             for _ in range(num_changes):
                 if lines:
                     idx = random.randint(0, len(lines) - 1)
@@ -206,31 +213,31 @@ See the examples directory for complete usage examples.
                         lines[idx] = line.replace('pip install', 'pip install --upgrade')
                     elif random.random() < 0.2:
                         lines[idx] = f"{line} (updated)"
-            
+
             content = '\n'.join(lines)
-            
+
         return content
-    
+
     def generate_test_dataset(self, total_documents=100, duplicate_percentage=30):
         """Generate a complete test dataset with known duplicate patterns"""
         documents = []
-        
+
         # Calculate how many of each type (ensure we get the exact total)
         per_type = total_documents // 4
         remainder = total_documents % 4
         duplicates_per_type = int(per_type * duplicate_percentage / 100)
-        
+
         content_generators = [
             ('code', self.generate_code_content),
             ('text', self.generate_text_content),
             ('data', self.generate_data_content),
             ('documentation', self.generate_documentation_content)
         ]
-        
+
         for idx, (content_type, generator) in enumerate(content_generators):
             # Calculate documents for this type (distribute remainder across first types)
             docs_for_type = per_type + (1 if idx < remainder else 0)
-            
+
             # Generate base documents
             base_docs = []
             for i in range(docs_for_type - duplicates_per_type):
@@ -247,13 +254,13 @@ See the examples directory for complete usage examples.
                 }
                 base_docs.append(doc)
                 documents.append(doc)
-            
+
             # Generate duplicates based on existing documents
             for i in range(duplicates_per_type):
                 if base_docs:
                     base_doc = random.choice(base_docs)
                     similarity_level = random.uniform(0.85, 0.98)  # High similarity
-                    
+
                     duplicate_content = generator(base_doc['content'], similarity_level)
                     duplicate_doc = {
                         'content': duplicate_content,
@@ -268,5 +275,5 @@ See the examples directory for complete usage examples.
                         }
                     }
                     documents.append(duplicate_doc)
-        
+
         return documents

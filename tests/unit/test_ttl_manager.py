@@ -1,40 +1,46 @@
 import pytest
 import time
-import random
 import math
-from unittest.mock import Mock
 
 from src.mcp_memory_server.memory.lifecycle import TTLManager, MemoryAging
 
 # Fixture for TTLManager configuration
+
+
 @pytest.fixture
 def ttl_config():
     return {
         'high_frequency_base': 60,  # 1 minute
         'high_frequency_jitter': 10,
-        'medium_frequency_base': 3600, # 1 hour
+        'medium_frequency_base': 3600,  # 1 hour
         'medium_frequency_jitter': 600,
-        'low_frequency_base': 86400, # 1 day
+        'low_frequency_base': 86400,  # 1 day
         'low_frequency_jitter': 7200,
-        'static_base': 604800, # 1 week
+        'static_base': 604800,  # 1 week
         'static_jitter': 86400
     }
 
 # Fixture for MemoryAging configuration
+
+
 @pytest.fixture
 def aging_config():
     return {
-        'decay_rate': 0.1, # 10% decay per day
+        'decay_rate': 0.1,  # 10% decay per day
         'minimum_score': 0.05,
         'enabled': True
     }
 
 # Fixture for TTLManager instance
+
+
 @pytest.fixture
 def ttl_manager(ttl_config):
     return TTLManager(ttl_config)
 
 # Fixture for MemoryAging instance
+
+
 @pytest.fixture
 def memory_aging(aging_config):
     return MemoryAging(aging_config)
@@ -46,7 +52,7 @@ class TestTTLManager:
         # Importance 0.1 (falls into high_frequency range 0.0-0.3)
         tier, ttl = ttl_manager.calculate_ttl(0.1)
         assert tier == 'high_frequency'
-        assert ttl >= (60 - 10) and ttl <= (60 + 10) # Base 60, Jitter 10
+        assert ttl >= (60 - 10) and ttl <= (60 + 10)  # Base 60, Jitter 10
 
     def test_calculate_ttl_medium_frequency(self, ttl_manager):
         # Importance 0.4 (falls into medium_frequency range 0.3-0.5)
@@ -138,7 +144,7 @@ class TestMemoryAging:
     def test_calculate_age_factor_old_document(self, memory_aging):
         current_time = time.time()
         # Document 1 day old
-        timestamp = current_time - 86400 # 1 day ago
+        timestamp = current_time - 86400  # 1 day ago
         age_factor = memory_aging.calculate_age_factor(timestamp, current_time)
         expected_factor = math.exp(-memory_aging.decay_rate * 1)
         assert age_factor == pytest.approx(expected_factor)
@@ -146,14 +152,14 @@ class TestMemoryAging:
     def test_calculate_age_factor_minimum_score(self, memory_aging):
         current_time = time.time()
         # Document very old, should hit minimum score
-        timestamp = current_time - (86400 * 100) # 100 days ago
+        timestamp = current_time - (86400 * 100)  # 100 days ago
         age_factor = memory_aging.calculate_age_factor(timestamp, current_time)
         assert age_factor == pytest.approx(memory_aging.minimum_score)
 
     def test_apply_aging_to_score(self, memory_aging):
         current_time = time.time()
         original_score = 0.8
-        timestamp = current_time - 86400 # 1 day ago
+        timestamp = current_time - 86400  # 1 day ago
         aged_score = memory_aging.apply_aging_to_score(original_score, timestamp, current_time)
         expected_score = original_score * math.exp(-memory_aging.decay_rate * 1)
         assert aged_score == pytest.approx(expected_score)
@@ -161,7 +167,7 @@ class TestMemoryAging:
     def test_apply_aging_to_score_below_minimum(self, memory_aging):
         current_time = time.time()
         original_score = 0.01
-        timestamp = current_time - 86400 # 1 day ago
+        timestamp = current_time - 86400  # 1 day ago
         aged_score = memory_aging.apply_aging_to_score(original_score, timestamp, current_time)
         assert aged_score == pytest.approx(memory_aging.minimum_score * 0.5)
 

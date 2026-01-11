@@ -1,8 +1,8 @@
 """
-Simplified Unit tests for MemoryIntelligenceSystem
+Simple unit tests for MemoryIntelligenceSystem
 
-Tests the core functionality of the intelligence system with 
-realistic expectations based on the actual implementation.
+Tests core functionality with minimal mocking to verify
+the simplified analytics system works correctly.
 """
 
 import pytest
@@ -13,80 +13,38 @@ from src.mcp_memory_server.analytics.intelligence import MemoryIntelligenceSyste
 
 @pytest.fixture
 def mock_memory_system():
-    """Create a mock memory system for testing."""
+    """Create a minimal mock memory system for testing."""
     memory_system = Mock()
-    
-    # Mock collections with proper iteration support
-    memory_system.short_term_memory = Mock()
-    memory_system.long_term_memory = Mock()
-    memory_system.permanent_memory = Mock()
-    
-    # Mock collection counts and make them iterable
-    memory_system.short_term_memory._collection.count.return_value = 100
-    memory_system.long_term_memory._collection.count.return_value = 50
-    memory_system.permanent_memory._collection.count.return_value = 25
-    
-    # Mock the collections list that gets iterated
-    memory_system.collections = [
-        memory_system.short_term_memory,
-        memory_system.long_term_memory, 
-        memory_system.permanent_memory
-    ]
-    
-    # Mock deduplicator with proper boolean enabled attribute
+
+    # Mock deduplicator
     memory_system.deduplicator = Mock()
     memory_system.deduplicator.enabled = True
-    memory_system.deduplicator.stats = {
-        'total_duplicates_found': 15,
-        'total_documents_merged': 12,
-        'total_storage_saved': 2048,
-        'processing_time_total': 5.5
-    }
     memory_system.deduplicator.get_deduplication_stats.return_value = {
-        'total_duplicates_found': 15,
-        'total_documents_merged': 12,
-        'total_storage_saved': 2048,
-        'processing_time_total': 5.5
+        'total_duplicates_found': 10,
+        'deduplication_efficiency': 20.0
     }
-    
-    # Mock query monitor with proper methods
+
+    # Mock query monitor
     memory_system.query_monitor = Mock()
-    memory_system.query_monitor.get_performance_stats.return_value = {
-        'total_queries': 500,
-        'average_response_time': 0.25,
-        'cache_hit_rate': 0.85,
-        'error_rate': 0.02
-    }
-    
-    # Add chunk_manager as a simple mock
+
+    # Mock chunk_manager
     memory_system.chunk_manager = Mock()
-    
-    # Mock get_collection_stats method with proper structure
+    memory_system.chunk_manager.get_relationship_statistics.return_value = {}
+
+    # Mock get_collection_stats
     memory_system.get_collection_stats.return_value = {
         'collections': {
-            'short_term': {
-                'count': 100,
-                'status': 'active'
-            },
-            'long_term': {
-                'count': 50, 
-                'status': 'active'
-            },
-            'permanent': {
-                'count': 25,
-                'status': 'active'
-            }
-        },
-        'total_documents': 175,
-        'last_updated': time.time()
+            'short_term_memory': {'count': 50, 'status': 'active'},
+            'long_term_memory': {'count': 30, 'status': 'active'}
+        }
     }
-    
-    # Mock additional methods that might be called during optimization
+
+    # Mock get_query_performance_stats
     memory_system.get_query_performance_stats.return_value = {
-        'total_queries': 500,
-        'average_response_time': 0.25
+        'query_count': 100,
+        'response_time_stats': {'mean_ms': 200.0}
     }
-    
+
     return memory_system
 
 
@@ -102,281 +60,185 @@ class TestMemoryIntelligenceSystemBasic:
     def test_initialization_default(self, mock_memory_system):
         """Test initialization with default configuration."""
         intelligence = MemoryIntelligenceSystem(mock_memory_system)
-        
+
         assert intelligence.memory_system == mock_memory_system
         assert isinstance(intelligence.config, dict)
-        assert intelligence.config['enable_predictive_analytics'] is True
-        assert isinstance(intelligence.analytics_history, list)
-        assert isinstance(intelligence.optimization_recommendations, list)
+        assert intelligence.config['history_retention_days'] == 30
 
     def test_initialization_custom_config(self, mock_memory_system):
         """Test initialization with custom configuration."""
-        custom_config = {
-            'enable_predictive_analytics': False,
-            'history_retention_days': 7
-        }
+        custom_config = {'history_retention_days': 7}
         intelligence = MemoryIntelligenceSystem(mock_memory_system, custom_config)
-        
+
         assert intelligence.config == custom_config
-        assert intelligence.config['enable_predictive_analytics'] is False
 
     def test_system_overview_generation(self, intelligence_system):
         """Test generation of system overview."""
         overview = intelligence_system._generate_system_overview()
-        
+
         assert isinstance(overview, dict)
-        # Should have basic system information based on actual implementation
-        expected_keys = [
-            'total_documents', 'active_collections', 'system_age_days', 
-            'deduplication_enabled', 'query_monitoring_active', 'estimated_storage_mb'
-        ]
-        for key in expected_keys:
-            assert key in overview
-        
-        # Check values are reasonable
-        assert isinstance(overview['total_documents'], int)
-        assert overview['total_documents'] >= 0
-        assert isinstance(overview['active_collections'], int)
-        assert isinstance(overview['system_age_days'], float)
-        assert overview['system_age_days'] >= 0
-        assert isinstance(overview['deduplication_enabled'], bool)
+        assert 'total_documents' in overview
+        assert 'active_collections' in overview
+        assert 'uptime_hours' in overview
+        assert 'deduplication_enabled' in overview
+        assert 'system_maturity' in overview
+
+        assert overview['total_documents'] == 80
+        assert overview['active_collections'] == 2
 
     def test_comprehensive_analytics_generation(self, intelligence_system):
         """Test generation of comprehensive analytics."""
         analytics = intelligence_system.generate_comprehensive_analytics()
-        
+
         assert isinstance(analytics, dict)
-        
-        # Should have main analysis sections based on actual implementation
-        expected_sections = [
-            'system_overview', 'storage_analytics', 'deduplication_intelligence',
-            'query_performance_insights', 'predictive_analytics', 'optimization_recommendations',
-            'system_health_assessment', 'trend_analysis', 'cost_benefit_analysis'
-        ]
-        
-        for section in expected_sections:
-            assert section in analytics
-            # Most sections are dicts, but some may be other types
-            assert analytics[section] is not None
-        
-        # Should have generation timestamp in system_overview
-        assert isinstance(analytics, dict)
+        assert 'timestamp' in analytics
+        assert 'system_overview' in analytics
+        assert 'storage_analytics' in analytics
+        assert 'deduplication_intelligence' in analytics
+        assert 'query_performance_insights' in analytics
+        assert 'optimization_recommendations' in analytics
+        assert 'system_health_assessment' in analytics
+
+        # Deprecated features should return not_implemented
+        assert analytics['predictive_analytics']['status'] == 'not_implemented'
+        assert analytics['trend_analysis']['status'] == 'not_implemented'
+        assert analytics['cost_benefit_analysis']['status'] == 'not_implemented'
 
     def test_storage_patterns_analysis(self, intelligence_system):
         """Test analysis of storage patterns."""
-        storage_analysis = intelligence_system._analyze_storage_patterns()
-        
-        assert isinstance(storage_analysis, dict)
-        # Based on actual implementation structure
-        assert 'total_documents' in storage_analysis
-        assert 'collection_distribution' in storage_analysis
-        assert 'growth_patterns' in storage_analysis
-        
-        # Check that values are reasonable
-        assert isinstance(storage_analysis['total_documents'], int)
-        assert storage_analysis['total_documents'] >= 0
-        assert isinstance(storage_analysis['collection_distribution'], dict)
+        storage = intelligence_system._analyze_storage_patterns()
+
+        assert isinstance(storage, dict)
+        assert 'total_documents' in storage
+        assert 'collection_distribution' in storage
+        assert 'recommendations' in storage
+
+        assert storage['total_documents'] == 80
 
     def test_deduplication_effectiveness_analysis(self, intelligence_system):
         """Test analysis of deduplication effectiveness."""
-        dedup_analysis = intelligence_system._analyze_deduplication_effectiveness()
-        
-        assert isinstance(dedup_analysis, dict)
-        # Based on actual implementation structure  
-        assert 'enabled' in dedup_analysis
-        assert 'current_stats' in dedup_analysis
-        assert 'effectiveness_trends' in dedup_analysis
-        
-        # Check that current stats have expected structure
-        current_stats = dedup_analysis['current_stats']
-        assert isinstance(current_stats, dict)
-        assert 'total_duplicates_found' in current_stats or len(current_stats) >= 0
+        dedup = intelligence_system._analyze_deduplication_effectiveness()
+
+        assert dedup['enabled'] is True
+        assert 'current_stats' in dedup
+        assert dedup['current_stats']['total_duplicates_found'] == 10
+
+    def test_deduplication_disabled(self, mock_memory_system):
+        """Test when deduplication is disabled."""
+        mock_memory_system.deduplicator.enabled = False
+        intelligence = MemoryIntelligenceSystem(mock_memory_system)
+
+        dedup = intelligence._analyze_deduplication_effectiveness()
+
+        assert dedup['enabled'] is False
 
     def test_query_patterns_analysis(self, intelligence_system):
         """Test analysis of query patterns."""
-        query_analysis = intelligence_system._analyze_query_patterns()
-        
-        assert isinstance(query_analysis, dict)
-        # Based on actual implementation structure
-        assert 'enabled' in query_analysis
-        assert 'daily_performance' in query_analysis
-        assert 'behavior_insights' in query_analysis
-        
-        # Check basic structure
-        assert isinstance(query_analysis['enabled'], bool)
+        query = intelligence_system._analyze_query_patterns()
 
-    def test_predictive_insights_generation(self, intelligence_system):
-        """Test generation of predictive insights."""
-        insights = intelligence_system._generate_predictive_insights()
-        
-        assert isinstance(insights, dict)
-        
-        # Should have prediction categories based on actual implementation
-        expected_categories = [
-            'enabled', 'generated_at', 'confidence_scores', 'deduplication_trends'
-        ]
-        for category in expected_categories:
-            assert category in insights
+        assert query['enabled'] is True
+        assert 'daily_performance' in query
+        assert 'weekly_performance' in query
 
-    def test_health_assessment(self, intelligence_system):
-        """Test comprehensive health assessment."""
-        health = intelligence_system._assess_comprehensive_health()
-        
-        assert isinstance(health, dict)
-        # Based on actual implementation structure
-        assert 'overall_score' in health
-        assert 'health_factors' in health
-        
-        # Overall score should be valid
-        overall_score = health['overall_score']
-        assert isinstance(overall_score, (int, float))
-        assert 0 <= overall_score <= 1
-        
-        # Health factors should exist
-        health_factors = health['health_factors']
-        assert isinstance(health_factors, dict)
+    def test_query_patterns_without_monitor(self, mock_memory_system):
+        """Test when query monitor not available."""
+        del mock_memory_system.query_monitor
+        intelligence = MemoryIntelligenceSystem(mock_memory_system)
+
+        query = intelligence._analyze_query_patterns()
+
+        assert query['enabled'] is False
 
     def test_optimization_recommendations(self, intelligence_system):
         """Test optimization recommendations generation."""
-        recommendations = intelligence_system._generate_optimization_recommendations()
-        
-        assert isinstance(recommendations, list)
-        
-        # Check recommendation structure if any exist
-        for rec in recommendations:
-            if isinstance(rec, dict):
-                # Should have at least some of these fields
-                possible_fields = ['priority', 'category', 'recommendation', 'impact', 'effort']
-                has_required_fields = any(field in rec for field in possible_fields)
-                assert has_required_fields
+        recs = intelligence_system._generate_optimization_recommendations()
 
-    def test_trends_analysis(self, intelligence_system):
-        """Test trends analysis."""
-        trends = intelligence_system._analyze_trends()
-        
-        assert isinstance(trends, dict)
-        # Should have trend categories (even if some are empty)
-        trend_categories = ['storage_trends', 'performance_trends', 'usage_trends']
-        for category in trend_categories:
-            assert category in trends
+        assert isinstance(recs, list)
+        for rec in recs:
+            assert 'priority' in rec
+            assert 'category' in rec
+            assert 'title' in rec
 
-    def test_cost_benefit_analysis(self, intelligence_system):
-        """Test cost-benefit analysis."""
-        cost_benefits = intelligence_system._calculate_cost_benefits()
-        
-        assert isinstance(cost_benefits, dict)
-        
-        # Should have cost and benefit information based on actual implementation
-        expected_keys = [
-            'benefits_breakdown', 'costs_breakdown', 'total_benefits_usd', 'cost_effectiveness'
-        ]
-        for key in expected_keys:
-            assert key in cost_benefits
+    def test_system_health_assessment(self, intelligence_system):
+        """Test system health assessment."""
+        health = intelligence_system._assess_system_health()
 
-    def test_system_maturity_calculation(self, intelligence_system):
-        """Test system maturity calculation."""
-        # Test that system maturity returns a valid string
+        assert 'overall_score' in health
+        assert 'status' in health
+        assert 'health_factors' in health
+
+        assert 0 <= health['overall_score'] <= 1
+        assert health['status'] in ['excellent', 'good', 'fair', 'needs_attention']
+
+    def test_system_maturity_advanced(self, intelligence_system):
+        """Test maturity calculation with all features."""
         maturity = intelligence_system._calculate_system_maturity()
-        assert isinstance(maturity, str)
-        
-        # Should be one of the valid maturity levels
-        valid_levels = ['new', 'developing', 'mature', 'advanced']
-        assert maturity in valid_levels
+        assert maturity == 'advanced'
+
+    def test_system_maturity_minimal(self, mock_memory_system):
+        """Test maturity calculation with no features."""
+        del mock_memory_system.deduplicator
+        del mock_memory_system.query_monitor
+        del mock_memory_system.chunk_manager
+
+        intelligence = MemoryIntelligenceSystem(mock_memory_system)
+        maturity = intelligence._calculate_system_maturity()
+
+        assert maturity == 'minimal'
 
     def test_storage_usage_estimation(self, intelligence_system):
         """Test storage usage estimation."""
-        # Test with different document counts
-        usage_small = intelligence_system._estimate_storage_usage(10)
-        usage_large = intelligence_system._estimate_storage_usage(1000)
-        
-        assert isinstance(usage_small, (int, float))
-        assert isinstance(usage_large, (int, float))
-        assert usage_large > usage_small  # More documents should use more storage
+        small = intelligence_system._estimate_storage_usage(100)
+        large = intelligence_system._estimate_storage_usage(1000)
 
-    def test_analytics_history_management(self, intelligence_system):
-        """Test analytics history management."""
-        # Add some sample history
-        old_record = {
-            'timestamp': time.time() - (35 * 86400),  # 35 days ago
-            'data': 'old'
-        }
-        recent_record = {
-            'timestamp': time.time() - (5 * 86400),   # 5 days ago
-            'data': 'recent'
-        }
-        
-        intelligence_system.analytics_history = [old_record, recent_record]
-        
-        # Test cleanup
+        assert large > small
+
+    def test_analytics_history_cleanup(self, intelligence_system):
+        """Test cleanup of old history."""
+        old_time = time.time() - (35 * 86400)
+        recent_time = time.time()
+
+        intelligence_system.analytics_history = [
+            {'timestamp': old_time},
+            {'timestamp': recent_time}
+        ]
+
         intelligence_system._cleanup_analytics_history()
-        
-        # Should handle cleanup without error
-        assert isinstance(intelligence_system.analytics_history, list)
 
-    def test_stub_methods_return_appropriate_types(self, intelligence_system):
-        """Test that stub methods return appropriate default types."""
-        # Many methods are currently stubs that return empty dicts
-        # Test they return the expected types
-        
-        assert isinstance(intelligence_system._analyze_deduplication_trends(), dict)
-        assert isinstance(intelligence_system._predict_storage_growth(7), dict)
-        assert isinstance(intelligence_system._identify_critical_issues(), list)
-        
-        # Health calculation methods should return scores
-        storage_health = intelligence_system._calculate_storage_health({})
-        assert 'score' in storage_health
-        assert isinstance(storage_health['score'], (int, float))
+        # Old record should be removed
+        assert len(intelligence_system.analytics_history) == 1
 
-    def test_edge_cases_and_robustness(self, intelligence_system):
-        """Test edge cases and error handling."""
-        # Test with None memory system
-        original_memory_system = intelligence_system.memory_system
-        intelligence_system.memory_system = None
-        
-        # Should handle gracefully
-        try:
-            overview = intelligence_system._generate_system_overview()
-            # If it returns something, it should be a dict
-            assert isinstance(overview, dict)
-        except AttributeError:
-            # Expected if accessing None memory system attributes
-            pass
-        
-        # Restore memory system
-        intelligence_system.memory_system = original_memory_system
+    def test_analytics_history_tracking(self, intelligence_system):
+        """Test that analytics are tracked in history."""
+        intelligence_system.generate_comprehensive_analytics()
 
-    def test_configuration_edge_cases(self, mock_memory_system):
-        """Test configuration handling."""
-        # Test with None config
-        intelligence = MemoryIntelligenceSystem(mock_memory_system, None)
-        assert isinstance(intelligence.config, dict)
-        
-        # Test with empty config
-        intelligence = MemoryIntelligenceSystem(mock_memory_system, {})
-        assert isinstance(intelligence.config, dict)
+        assert len(intelligence_system.analytics_history) == 1
+        assert 'timestamp' in intelligence_system.analytics_history[0]
+        assert 'total_documents' in intelligence_system.analytics_history[0]
 
-    def test_cache_functionality(self, intelligence_system):
-        """Test basic cache functionality."""
-        # The cache is internal, just test it exists and works
-        cache_key = 'test_key'
-        test_data = {'test': 'value'}
-        
-        intelligence_system._cache[cache_key] = test_data
-        intelligence_system._cache_timestamps[cache_key] = time.time()
-        
-        assert cache_key in intelligence_system._cache
-        assert intelligence_system._cache[cache_key] == test_data
+    def test_error_handling(self, mock_memory_system):
+        """Test error handling in system overview."""
+        mock_memory_system.get_collection_stats.side_effect = Exception("Error")
+
+        intelligence = MemoryIntelligenceSystem(mock_memory_system)
+        overview = intelligence._generate_system_overview()
+
+        assert 'error' in overview
+
+    def test_empty_collections(self, mock_memory_system):
+        """Test handling of empty collections."""
+        mock_memory_system.get_collection_stats.return_value = {'collections': {}}
+
+        intelligence = MemoryIntelligenceSystem(mock_memory_system)
+        storage = intelligence._analyze_storage_patterns()
+
+        assert storage['total_documents'] == 0
 
     def test_comprehensive_workflow(self, intelligence_system):
-        """Test a comprehensive workflow using multiple methods."""
-        # This should work end-to-end without errors
+        """Test complete workflow without errors."""
         analytics = intelligence_system.generate_comprehensive_analytics()
-        
+
         assert isinstance(analytics, dict)
         assert len(analytics) > 0
-        
-        # Should have generated all required sections based on actual implementation
-        required_sections = ['system_overview', 'system_health_assessment']
-        for section in required_sections:
-            assert section in analytics
-            assert analytics[section] is not None
+        assert 'system_overview' in analytics
+        assert 'system_health_assessment' in analytics

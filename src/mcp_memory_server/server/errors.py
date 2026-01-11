@@ -12,7 +12,7 @@ import logging
 
 class MCPErrorCode(IntEnum):
     """Standard error codes for MCP server operations.
-    
+
     Based on JSON-RPC 2.0 specification with MCP-specific extensions.
     """
     # JSON-RPC 2.0 standard errors
@@ -21,7 +21,7 @@ class MCPErrorCode(IntEnum):
     METHOD_NOT_FOUND = -32601
     INVALID_PARAMS = -32602
     INTERNAL_ERROR = -32603
-    
+
     # MCP implementation-defined errors (-32000 to -32099)
     TOOL_EXECUTION_ERROR = -32000
     MEMORY_SYSTEM_ERROR = -32001
@@ -41,33 +41,53 @@ def create_error_response(
     data: Optional[Dict[str, Any]] = None,
     log_error: bool = True
 ) -> Dict[str, Any]:
-    """Create a standardized JSON-RPC 2.0 error response.
-    
+    """Create a standardized MCP tool error response.
+
+    Per MCP 2025-06-18 spec, tool errors should return a successful JSON-RPC
+    response with isError=true in the result, not a JSON-RPC error object.
+
     Args:
         code: Standard error code from MCPErrorCode
         message: Human-readable error message
         data: Optional additional error data
         log_error: Whether to log the error
-        
+
     Returns:
-        Standardized error response dictionary
+        Standardized MCP tool error response dictionary
     """
     if log_error:
         logging.error(f"MCP Error {code}: {message}")
         if data:
             logging.error(f"Error data: {data}")
-    
-    error_response = {
-        "success": False,
-        "error": {
-            "code": int(code),
-            "message": message
-        }
-    }
-    
+
+    # MCP spec: tool errors are returned as isError=true with text content
+    error_text = f"Error {code}: {message}"
     if data:
-        error_response["error"]["data"] = data
-    
+        error_text += f"\n\nDetails: {data}"
+
+    error_response = {
+        "content": [
+            {
+                "type": "text",
+                "text": error_text
+            }
+        ],
+        "isError": True
+    }
+
+    # Include error metadata for programmatic access
+    if data:
+        error_response["_meta"] = {
+            "error_code": int(code),
+            "error_message": message,
+            "error_data": data
+        }
+    else:
+        error_response["_meta"] = {
+            "error_code": int(code),
+            "error_message": message
+        }
+
     return error_response
 
 
@@ -78,27 +98,27 @@ def create_tool_error(
     additional_data: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """Create a standardized tool execution error response.
-    
+
     Args:
         message: Human-readable error message
         error_code: Specific error code (defaults to TOOL_EXECUTION_ERROR)
         original_error: Original exception that caused the error
         additional_data: Additional error context data
-        
+
     Returns:
         Standardized error response dictionary
     """
     data = {}
-    
+
     if original_error:
         data["original_error"] = {
             "type": type(original_error).__name__,
             "message": str(original_error)
         }
-    
+
     if additional_data:
         data.update(additional_data)
-    
+
     return create_error_response(
         code=error_code,
         message=message,
@@ -108,12 +128,12 @@ def create_tool_error(
 
 def create_validation_error(field: str, value: Any, expected: str) -> Dict[str, Any]:
     """Create a parameter validation error response.
-    
+
     Args:
         field: Name of the invalid field
         value: The invalid value provided
         expected: Description of expected value
-        
+
     Returns:
         Standardized validation error response
     """
@@ -130,11 +150,11 @@ def create_validation_error(field: str, value: Any, expected: str) -> Dict[str, 
 
 def create_not_found_error(resource_type: str, resource_id: str) -> Dict[str, Any]:
     """Create a resource not found error response.
-    
+
     Args:
         resource_type: Type of resource that wasn't found
         resource_id: ID of the resource that wasn't found
-        
+
     Returns:
         Standardized not found error response
     """
@@ -148,9 +168,54 @@ def create_not_found_error(resource_type: str, resource_id: str) -> Dict[str, An
     )
 
 
+def create_success_response(
+    message: str,
+    data: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Create a standardized MCP tool success response.
+
+    Per MCP 2025-06-18 spec, all successful tool results must have:
+    - content: array with at least one content object
+    - isError: false
+
+    Args:
+        message: Human-readable success message
+        data: Optional additional result data
+
+    Returns:
+        Standardized MCP tool success response dictionary
+    """
+    # Format success message with data if provided
+    if data:
+        # Create formatted text with structured data
+        text_parts = [message]
+        text_parts.append("\n\nResult:")
+        for key, value in data.items():
+            text_parts.append(f"  {key}: {value}")
+        success_text = "\n".join(text_parts)
+    else:
+        success_text = message
+
+    success_response = {
+        "content": [
+            {
+                "type": "text",
+                "text": success_text
+            }
+        ],
+        "isError": False
+    }
+
+    # Include structured data for programmatic access
+    if data:
+        success_response.update(data)
+
+    return success_response
+
+
 def wrap_tool_execution(func):
     """Decorator to wrap tool functions with standardized error handling.
-    
+
     This decorator catches all exceptions and converts them to standardized
     JSON-RPC error responses.
     """
@@ -167,7 +232,7 @@ def wrap_tool_execution(func):
                     "kwargs": str(kwargs)
                 }
             )
-    
+
     # Preserve async functions
     if hasattr(func, '__code__') and func.__code__.co_flags & 0x80:  # CO_COROUTINE
         async def async_wrapper(*args, **kwargs):
@@ -184,5 +249,5 @@ def wrap_tool_execution(func):
                     }
                 )
         return async_wrapper
-    
+
     return wrapper

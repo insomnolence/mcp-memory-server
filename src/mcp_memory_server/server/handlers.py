@@ -1,103 +1,148 @@
 import asyncio
 import json
+import uuid
+import time
 from typing import List, Dict, Any
-from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from .models import JsonRpcRequest, JsonRpcResponse, JsonRpcError
-from .errors import MCPErrorCode, create_error_response
+from .models import JsonRpcResponse, JsonRpcError
+from .errors import MCPErrorCode
+
+# In-memory storage for active sessions (for demonstration purposes)
+active_sessions: Dict[str, Dict[str, Any]] = {}
 
 
 def convert_to_mcp_format(tool_result: Dict[str, Any]) -> Dict[str, Any]:
-    """Convert custom tool response to MCP-compliant format.
-    
+    """Convert tool response to MCP-compliant format.
+
+    Per MCP 2025-06-18 spec, all tool results must have:
+    - content: array of content objects
+    - isError: boolean indicating success/failure
+
     Args:
-        tool_result: Custom tool response dict
-        
+        tool_result: Tool response dict
+
     Returns:
-        MCP-compliant response dict
+        MCP-compliant response dict (already compliant if from our tools)
     """
-    # For MCP compliance, return the tool result directly as structured data
-    # The MCP specification expects structured responses, not JSON strings
-    
-    # Check if it's a success/error response
-    is_success = tool_result.get('success', True)
-    
-    if is_success:
-        # For successful responses, return the result directly
-        # Remove internal 'success' flag as it's not part of MCP spec
-        result = tool_result.copy()
-        result.pop('success', None)
-        return result
-    else:
-        # For errors, return error structure
-        return {
-            "error": {
-                "code": -32000,
-                "message": tool_result.get('message', 'Tool execution failed'),
-                "data": tool_result
-            }
-        }
+    # Our tools now return MCP-compliant format with content + isError
+    # Just pass through as-is
+    return tool_result
 
 
 async def list_resources_handler() -> List[dict]:
-    """Conceptually lists documents in the vector store as resources."""
-    return [
-        {"id": "doc_123", "name": "Project README", "type": "text/markdown"},
-        {"id": "doc_456", "name": "main.py", "type": "text/x-python"},
-    ]
+    """List resources following MCP 2025-06-18 specification.
+
+    This memory server uses tools (query_documents, add_document, etc.) for all
+    memory operations rather than exposing memories as browsable resources.
+    Returns an empty list as there are no static resources to expose.
+
+    Returns:
+        Empty list - use query_documents tool for memory access.
+    """
+    return []
 
 
-async def read_resource_handler(resource_id: str) -> dict:
-    """Conceptually reads a specific document from the vector store."""
-    if resource_id == "doc_123":
-        return {"content": "# Project Title\nThis is the project README file..."}
-    elif resource_id == "doc_456":
-        return {"content": "import os\n\nprint('hello world')"}
-    else:
-        raise ValueError(f"Resource '{resource_id}' not found.")
+async def read_resource_handler(uri: str) -> dict:
+    """Read a resource following MCP 2025-06-18 specification.
+
+    This memory server does not expose resources. Use the query_documents
+    tool to search and retrieve memory content instead.
+
+    Raises:
+        ValueError: Always, as no resources are available.
+    """
+    raise ValueError(
+        f"Resource '{uri}' not found. This memory server uses tools for "
+        "content access. Use 'query_documents' to search memories."
+    )
 
 
 async def event_generator():
-    """
-    Handles the SSE connection for the Gemini CLI.
-    Sends the 'mcp-ready' event and then keeps the connection alive with heartbeats.
+    """Handle SSE connection for the Gemini CLI.
+
+    Sends the 'mcp-ready' event and keeps the connection alive with heartbeats.
     """
     yield "event: mcp-ready\ndata: {}\n\n"
 
     try:
         while True:
             await asyncio.sleep(10)
-            yield "data: heartbeat\n\n"
+            heartbeat_payload = json.dumps({
+                "type": "heartbeat",
+                "timestamp": time.time()
+            })
+            yield f"event: heartbeat\ndata: {heartbeat_payload}\n\n"
     except asyncio.CancelledError:
         pass
 
 
-async def handle_initialize(rpc_id: int, server_config: dict, tool_definitions: List[dict]) -> JSONResponse:
-    """Handle MCP initialize request."""
-    response = JsonRpcResponse(
-        id=rpc_id,
-        result={
-            "protocolVersion": server_config.get('protocol_version', '2025-06-18'),
-            "capabilities": {
-                "tools": {},
-                "resources": {}
-            },
-            "serverInfo": {
-                "name": server_config.get('title', 'Advanced Project Memory MCP Server'),
-                "version": server_config.get('version', '2.0.0'),
-                "serverURL": f"http://{server_config.get('host', '127.0.0.1')}:{server_config.get('port', 8080)}/"
-            },
-            "tools": tool_definitions
+async def handle_initialize(
+    rpc_id: int,
+    params: dict,
+    server_config: dict,
+    tool_definitions: List[dict],
+    active_sessions: Dict[str, Dict[str, Any]]
+) -> JSONResponse:
+    """Handle MCP initialize request per specification.
+
+    Supports protocol versions: 2024-11-05, 2025-03-26, 2025-06-18
+    """
+    params = params or {}
+    requested_protocol = params.get("protocolVersion")
+
+    # Supported protocol versions (newest first)
+    supported_versions = ["2025-06-18", "2025-03-26", "2024-11-05"]
+    server_default = server_config.get('protocol_version', "2024-11-05")
+
+    # Protocol version negotiation:
+    # 1. If client requests a version we support, use it
+    # 2. Otherwise, use our default (client may disconnect if incompatible)
+    if requested_protocol and requested_protocol in supported_versions:
+        protocol_version = requested_protocol
+    else:
+        if server_default in supported_versions:
+            protocol_version = server_default
+        else:
+            protocol_version = "2024-11-05"
+
+    # Create session
+    session_id = str(uuid.uuid4())
+    active_sessions[session_id] = {
+        "initialized_at": time.time(),
+        "last_accessed_at": time.time(),
+        "protocol_version": protocol_version
+    }
+
+    # Build MCP-compliant response
+    result = {
+        "protocolVersion": protocol_version,
+        "capabilities": {
+            "tools": {},  # Server supports tools (definitions come from tools/list)
+            "resources": {}  # Server offers resources capability
+        },
+        "serverInfo": {
+            "name": server_config.get('title', 'Dollhouse MCP Development Memory Server'),
+            "version": server_config.get('version', '2.0.0')
         }
+        # Tools array removed - per MCP spec, tools come from tools/list, NOT initialize
+    }
+
+    response = JsonRpcResponse(id=rpc_id, result=result)
+
+    # Per MCP 2025-06-18 spec: Return session ID in Mcp-Session-Id header
+    # This allows the server to track client sessions for stateful operations
+    return JSONResponse(
+        content=response.dict(),
+        media_type="application/json",
+        headers={"Mcp-Session-Id": session_id}
     )
-    return JSONResponse(content=response.dict(), media_type="application/json-rpc")
 
 
 async def handle_tools_list(rpc_id: int, tool_definitions: List[dict]) -> JSONResponse:
     """Handle tools/list request."""
     response = JsonRpcResponse(
-        id=rpc_id, 
+        id=rpc_id,
         result={
             "tools": tool_definitions
         }
@@ -113,17 +158,21 @@ async def handle_resources_list(rpc_id: int) -> JSONResponse:
 
 
 async def handle_resources_read(rpc_id: int, params: dict) -> JSONResponse:
-    """Handle resources/read request."""
-    resource_id = params.get("resourceId")
-    if not resource_id:
-        raise ValueError("`resourceId` parameter is required for `resources/read`.")
-    
-    content = await read_resource_handler(resource_id)
+    """Handle resources/read request per MCP 2025-06-18 specification."""
+    uri = params.get("uri")
+    if not uri:
+        raise ValueError("`uri` parameter is required for `resources/read`.")
+
+    content = await read_resource_handler(uri)
     response = JsonRpcResponse(id=rpc_id, result=content)
     return JSONResponse(content=response.dict(), media_type="application/json-rpc")
 
 
-async def handle_tools_call(rpc_id: int, params: dict, tool_registry: Dict[str, Any]) -> JSONResponse:
+async def handle_tools_call(
+    rpc_id: int,
+    params: dict,
+    tool_registry: Dict[str, Any]
+) -> JSONResponse:
     """Handle tools/call request with comprehensive error handling."""
     try:
         # Validate required parameters
@@ -137,7 +186,7 @@ async def handle_tools_call(rpc_id: int, params: dict, tool_registry: Dict[str, 
                 }
             )
             return JSONResponse(content=error_response.dict(), status_code=400)
-        
+
         tool_name = params.get("name")
         if not tool_name:
             error_response = JsonRpcError(
@@ -149,7 +198,7 @@ async def handle_tools_call(rpc_id: int, params: dict, tool_registry: Dict[str, 
                 }
             )
             return JSONResponse(content=error_response.dict(), status_code=400)
-        
+
         tool_args = params.get("arguments", {})
         if not isinstance(tool_args, dict):
             error_response = JsonRpcError(
@@ -161,7 +210,7 @@ async def handle_tools_call(rpc_id: int, params: dict, tool_registry: Dict[str, 
                 }
             )
             return JSONResponse(content=error_response.dict(), status_code=400)
-        
+
         # Check if tool exists
         tool_func = tool_registry.get(tool_name)
         if not tool_func:
@@ -177,9 +226,8 @@ async def handle_tools_call(rpc_id: int, params: dict, tool_registry: Dict[str, 
                 }
             )
             return JSONResponse(content=error_response.dict(), status_code=404)
-        
+
         # Execute tool function with error handling
-        import asyncio
         try:
             if asyncio.iscoroutinefunction(tool_func):
                 result = await tool_func(**tool_args)
@@ -192,7 +240,10 @@ async def handle_tools_call(rpc_id: int, params: dict, tool_registry: Dict[str, 
                 error={
                     "code": int(MCPErrorCode.INVALID_PARAMS),
                     "message": f"Invalid parameters for tool '{tool_name}': {str(e)}",
-                    "data": {"tool_name": tool_name, "provided_args": list(tool_args.keys())}
+                    "data": {
+                        "tool_name": tool_name,
+                        "provided_args": list(tool_args.keys())
+                    }
                 }
             )
             return JSONResponse(content=error_response.dict(), status_code=400)
@@ -210,13 +261,13 @@ async def handle_tools_call(rpc_id: int, params: dict, tool_registry: Dict[str, 
                 }
             )
             return JSONResponse(content=error_response.dict(), status_code=500)
-        
+
         # Convert custom tool response to MCP-compliant format
         mcp_result = convert_to_mcp_format(result)
-        
+
         response = JsonRpcResponse(id=rpc_id, result=mcp_result)
         return JSONResponse(content=response.dict(), media_type="application/json-rpc")
-        
+
     except Exception as e:
         # Unexpected error in handler
         error_response = JsonRpcError(
@@ -239,7 +290,13 @@ def handle_unknown_method(rpc_id: int, method: str) -> JSONResponse:
             "message": f"Method '{method}' not found",
             "data": {
                 "requested_method": method,
-                "available_methods": ["initialize", "tools/list", "tools/call", "resources/list", "resources/read"]
+                "available_methods": [
+                    "initialize",
+                    "tools/list",
+                    "tools/call",
+                    "resources/list",
+                    "resources/read"
+                ]
             }
         }
     )

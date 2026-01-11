@@ -27,8 +27,8 @@ torch>=2.0.0
 # Data validation and models
 pydantic>=2.0.0
 
-# JSON-RPC support
-jsonrpc-server>=0.4.2
+# JSON-RPC support (implemented via FastAPI + Pydantic models)
+# jsonrpc-server>=0.4.2  # Not needed - using custom implementation
 
 # Standard library enhancements
 typing-extensions>=4.5.0

@@ -2,6 +2,7 @@ import pytest
 import os
 from unittest.mock import patch
 
+
 @pytest.mark.integration
 def test_chromadb_persistence_enforced_in_production(running_mcp_server, tmp_path):
     """Test that ChromaDB persistence is enforced in a production-like environment."""
@@ -13,7 +14,7 @@ def test_chromadb_persistence_enforced_in_production(running_mcp_server, tmp_pat
         del os.environ['MCP_CONFIG_FILE']
 
     # Create a dummy config file with a different port to avoid conflicts
-    dummy_config_path = tmp_path / "dummy_config.json"  
+    dummy_config_path = tmp_path / "dummy_config.json"
     dummy_config_path.write_text('{"server": {"host": "127.0.0.1", "port": 8091}}')
 
     # Patch logging to capture warnings/errors
@@ -23,7 +24,7 @@ def test_chromadb_persistence_enforced_in_production(running_mcp_server, tmp_pat
             # Create a new server tester with the different port to avoid conflicts
             from conftest import MCPServerTester
             config_server_tester = MCPServerTester(server_host='127.0.0.1', server_port=8091)
-            
+
             # Attempt to start the server with the dummy config
             assert config_server_tester.start_server(config_file=str(dummy_config_path)), \
                 "Server failed to start with dummy config (expected to start and use default persistence)"
@@ -38,6 +39,7 @@ def test_chromadb_persistence_enforced_in_production(running_mcp_server, tmp_pat
             config_server_tester.stop_server()
             if original_mcp_config_file:
                 os.environ['MCP_CONFIG_FILE'] = original_mcp_config_file
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -75,31 +77,41 @@ async def test_configurable_importance_thresholds(running_mcp_server, tmp_path):
         "metadata": {"importance_score": 0.3}  # This metadata will be overridden by actual scorer
     })
     assert "error" not in add_result_st, f"Failed to add ST document: {add_result_st.get('error')}"
-    
-    print(f"Added ST document: tier={add_result_st['result']['assigned_tier']}, importance={add_result_st['result']['importance_score']}")
-    
+
+    print(
+        f"Added ST document: tier={
+            add_result_st['result']['assigned_tier']}, importance={
+            add_result_st['result']['importance_score']}")
+
     # The tier assignment depends on the actual calculated importance, not the metadata hint
     # So let's verify the system is using the custom thresholds, but be flexible about outcomes
-    st_tier = add_result_st['result']['assigned_tier']
-    st_importance = add_result_st['result']['importance_score']
+    # (tier and importance values retrieved for potential debugging but not asserted)
 
-    # Add a document with more content that should get higher importance 
+    # Add a document with more content that should get higher importance
     add_result_lt = await running_mcp_server.call_mcp_tool("add_document", {
-        "content": "This is a detailed technical document with implementation notes, code examples, and important information that should be preserved for long-term storage and reference.",
+        "content": (
+            "This is a detailed technical document with implementation notes, code examples, "
+            "and important information that should be preserved for long-term storage and reference."
+        ),
         "metadata": {"type": "technical_documentation"}
     })
     assert "error" not in add_result_lt, f"Failed to add LT document: {add_result_lt.get('error')}"
-    
-    print(f"Added LT document: tier={add_result_lt['result']['assigned_tier']}, importance={add_result_lt['result']['importance_score']}")
+
+    print(
+        f"Added LT document: tier={
+            add_result_lt['result']['assigned_tier']}, importance={
+            add_result_lt['result']['importance_score']}")
 
     # Test passes if both documents were added successfully with tier assignments
-    assert add_result_st['result']['assigned_tier'] in ['short_term', 'long_term'], "First document should be assigned to a valid tier"
-    assert add_result_lt['result']['assigned_tier'] in ['short_term', 'long_term'], "Second document should be assigned to a valid tier"
-    
+    assert add_result_st['result']['assigned_tier'] in ['short_term', 'long_term'], \
+        "First document should be assigned to a valid tier"
+    assert add_result_lt['result']['assigned_tier'] in ['short_term', 'long_term'], \
+        "Second document should be assigned to a valid tier"
+
     print("✓ Threshold configuration test completed - documents assigned to appropriate tiers")
     print("✅ Server with custom thresholds working correctly:")
-    print(f"   - All documents added successfully")
-    print(f"   - Custom configuration loaded and server started")
-    print(f"   - Tier assignments based on calculated importance scores")
+    print("   - All documents added successfully")
+    print("   - Custom configuration loaded and server started")
+    print("   - Tier assignments based on calculated importance scores")
 
     # No cleanup needed - using shared server

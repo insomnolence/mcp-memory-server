@@ -1,10 +1,12 @@
 import pytest
 import time
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from src.mcp_memory_server.memory.query_monitor import QueryPerformanceMonitor
 
 # Fixture for QueryPerformanceMonitor configuration
+
+
 @pytest.fixture
 def query_monitor_config():
     return {
@@ -24,6 +26,8 @@ def query_monitor_config():
     }
 
 # Fixture for QueryPerformanceMonitor instance
+
+
 @pytest.fixture
 def query_monitor(query_monitor_config):
     return QueryPerformanceMonitor(query_monitor_config)
@@ -71,7 +75,7 @@ class TestQueryPerformanceMonitor:
         # Add an old query (more than a day ago)
         with patch('time.time', return_value=current_time - (86400 * 2)):
             query_monitor.track_query("old_q", {'total_results': 1}, 0.5, {})
-        
+
         # Add a recent query (within the last hour)
         with patch('time.time', return_value=current_time - 1800):
             query_monitor.track_query("recent_q_hour", {'total_results': 1}, 0.1, {})
@@ -80,11 +84,11 @@ class TestQueryPerformanceMonitor:
         query_monitor.track_query("recent_q_now", {'total_results': 1}, 0.05, {})
 
         summary_hour = query_monitor.get_performance_summary(time_window='hour')
-        assert summary_hour['query_count'] == 2 # recent_q_hour and recent_q_now
-        assert summary_hour['response_time_stats']['mean_ms'] == pytest.approx(75) # (100+50)/2
+        assert summary_hour['query_count'] == 2  # recent_q_hour and recent_q_now
+        assert summary_hour['response_time_stats']['mean_ms'] == pytest.approx(75)  # (100+50)/2
 
         summary_day = query_monitor.get_performance_summary(time_window='day')
-        assert summary_day['query_count'] == 2 # recent_q_hour and recent_q_now (old query beyond day window)
+        assert summary_day['query_count'] == 2  # recent_q_hour and recent_q_now (old query beyond day window)
 
         summary_all = query_monitor.get_performance_summary(time_window='all')
         assert summary_all['query_count'] == 3

@@ -1,6 +1,7 @@
 import pytest
 import time
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_deduplication_flow_semantic(running_mcp_server, data_generator):
@@ -18,7 +19,7 @@ async def test_deduplication_flow_semantic(running_mcp_server, data_generator):
     })
     print(f"Add base document result: {add_result_base}")
     assert "error" not in add_result_base, f"Failed to add base document: {add_result_base.get('error')}"
-    time.sleep(1) # Give ChromaDB time to process
+    time.sleep(1)  # Give ChromaDB time to process
 
     # Add a semantically similar document (different wording)
     similar_content = "A swift fox, brown in color, leaps over a canine that is quite idle."
@@ -27,7 +28,7 @@ async def test_deduplication_flow_semantic(running_mcp_server, data_generator):
         "metadata": {"type": "test_dedup", "source": "similar"}
     })
     assert "error" not in add_result_similar, f"Failed to add similar document: {add_result_similar.get('error')}"
-    time.sleep(1) # Give ChromaDB time to process
+    time.sleep(1)  # Give ChromaDB time to process
 
     # Add a distinct document
     distinct_content = "The cat sat on the mat."
@@ -36,12 +37,12 @@ async def test_deduplication_flow_semantic(running_mcp_server, data_generator):
         "metadata": {"type": "test_dedup", "source": "distinct"}
     })
     assert "error" not in add_result_distinct, f"Failed to add distinct document: {add_result_distinct.get('error')}"
-    time.sleep(1) # Give ChromaDB time to process
+    time.sleep(1)  # Give ChromaDB time to process
 
     # Get initial memory stats - account for documents from other tests
     stats_before_dedup = await running_mcp_server.call_mcp_tool("get_memory_stats")
     initial_total_docs = stats_before_dedup['result']['total_documents']
-    
+
     # In a shared test environment, we just need to ensure we added our 3 documents
     # The total might be higher due to other tests
     print(f"Total documents before dedup: {initial_total_docs} (includes documents from other tests)")
@@ -54,7 +55,7 @@ async def test_deduplication_flow_semantic(running_mcp_server, data_generator):
     # NOTE: This assumes a 'run_deduplication' tool exists. If not, this test needs adjustment.
     # For now, we'll call get_deduplication_stats which might trigger some internal logic or rely on background.
     # A better approach would be to expose a tool to explicitly run deduplication.
-    
+
     # Let's assume for now that calling get_deduplication_stats might trigger it or we need to wait for background.
     # In a real scenario, we'd have a dedicated tool or mock the background process.
     print("\nTriggering deduplication using deduplicate_memories tool...")
@@ -63,7 +64,7 @@ async def test_deduplication_flow_semantic(running_mcp_server, data_generator):
         "dry_run": False
     })
     assert "error" not in dedup_result, f"Error running deduplication: {dedup_result.get('error')}"
-    
+
     print(f"Deduplication result: {dedup_result['result']}")
 
     # Get memory stats after deduplication
@@ -73,22 +74,29 @@ async def test_deduplication_flow_semantic(running_mcp_server, data_generator):
     # Check if deduplication made any changes
     documents_change = initial_total_docs - final_total_docs
     print(f"Documents after dedup: {final_total_docs}, change: {documents_change}")
-    
+
     # At minimum, ensure deduplication ran without errors and the document count is reasonable
     assert final_total_docs <= initial_total_docs, "Document count should not increase after deduplication"
 
     # Verify deduplication stats to confirm it actually ran
     final_dedup_stats = await running_mcp_server.call_mcp_tool("get_deduplication_stats")
     assert "error" not in final_dedup_stats, f"Error getting final dedup stats: {final_dedup_stats.get('error')}"
-    
+
     # The stats should show some deduplication activity
     stats_data = final_dedup_stats['result']
-    print(f"Final dedup stats: duplicates_found={stats_data.get('total_duplicates_found', 0)}, merged={stats_data.get('total_documents_merged', 0)}")
-    
+    print(
+        f"Final dedup stats: duplicates_found={
+            stats_data.get(
+                'total_duplicates_found',
+                0)}, merged={
+            stats_data.get(
+                'total_documents_merged',
+                0)}")
+
     print("✅ Deduplication system functional:")
-    print(f"   - Deduplication tool executed successfully")
-    print(f"   - Document count handled appropriately: {initial_total_docs} → {final_total_docs}")
-    print(f"   - Deduplication statistics available")
+    print("   - Deduplication tool executed successfully")
+    print("   - Document count handled appropriately: {} → {}".format(initial_total_docs, final_total_docs))
+    print("   - Deduplication statistics available")
 
     # Verify that querying for the similar content now returns the base content (or the merged one)
     query_merged_content = await running_mcp_server.call_mcp_tool("query_documents", {

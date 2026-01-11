@@ -1,12 +1,6 @@
-import logging
-import os
-from typing import List, Dict, Any, Optional
-from sentence_transformers import CrossEncoder
 
-from ..memory import HierarchicalMemorySystem, LifecycleManager
-from ..deduplication import MemoryDeduplicator
-from ..analytics import MemoryIntelligenceSystem
-from ..server.errors import create_tool_error, MCPErrorCode
+from ..memory import HierarchicalMemorySystem
+from ..server.errors import create_tool_error, create_success_response, MCPErrorCode
 
 # --- Document Management Tools ---
 from .query import query_documents_tool, apply_reranking
@@ -34,7 +28,7 @@ from .performance import (
 
 # --- Analytics and Intelligence Tools ---
 from .analytics import (
-    get_comprehensive_analytics_tool, get_system_intelligence_tool, 
+    get_comprehensive_analytics_tool, get_system_intelligence_tool,
     get_optimization_recommendations_tool, get_predictive_insights_tool,
     get_chunk_relationships_tool, get_system_health_assessment_tool
 )
@@ -46,7 +40,14 @@ from .advanced_deduplication import (
     run_advanced_deduplication_tool
 )
 
-async def add_document_tool(memory_system: HierarchicalMemorySystem, content: str, metadata: dict = None, context: dict = None, language: str = "text", memory_type: str = "auto") -> dict:
+# --- Document Management Tools ---
+from .management import (
+    delete_document_tool, demote_importance_tool, update_document_tool
+)
+
+
+async def add_document_tool(memory_system: HierarchicalMemorySystem, content: str, metadata: dict = None,
+                            context: dict = None, language: str = "text", memory_type: str = "auto") -> dict:
     """Adds a new document (memory entry) to the hierarchical memory system.
     Automatically scores importance and routes to appropriate memory tiers.
     """
@@ -58,30 +59,38 @@ async def add_document_tool(memory_system: HierarchicalMemorySystem, content: st
                 MCPErrorCode.VALIDATION_ERROR,
                 additional_data={"field": "content", "provided_type": type(content).__name__}
             )
-        
+
         if metadata is not None and not isinstance(metadata, dict):
             return create_tool_error(
                 "Metadata must be a dictionary or None",
                 MCPErrorCode.VALIDATION_ERROR,
                 additional_data={"field": "metadata", "provided_type": type(metadata).__name__}
             )
-        
+
         if memory_type not in ["auto", "short_term", "long_term", "permanent"]:
             return create_tool_error(
                 f"Invalid memory_type '{memory_type}'. Must be one of: auto, short_term, long_term, permanent",
                 MCPErrorCode.VALIDATION_ERROR,
-                additional_data={"field": "memory_type", "valid_values": ["auto", "short_term", "long_term", "permanent"]}
+                additional_data={
+                    "field": "memory_type",
+                    "valid_values": [
+                        "auto",
+                        "short_term",
+                        "long_term",
+                        "permanent"]}
             )
-        
+
         result = await memory_system.add_memory(content, metadata, context, memory_type)
-        
-        return {
-            "status": "success",
-            "document_id": result.get("memory_id"),
-            "assigned_tier": result.get("collection"),
-            "importance_score": result.get("importance_score"),
-            "message": result.get("message")
-        }
+
+        return create_success_response(
+            message="Document added successfully",
+            data={
+                "document_id": result.get("memory_id"),
+                "assigned_tier": result.get("collection"),
+                "importance_score": result.get("importance_score"),
+                "details": result.get("message")
+            }
+        )
     except Exception as e:
         return create_tool_error(
             f"Failed to add document: {str(e)}",
@@ -105,5 +114,7 @@ __all__ = [
     'get_chunk_relationships_tool', 'get_system_health_assessment_tool',
     'optimize_deduplication_thresholds_tool', 'get_domain_analysis_tool',
     'get_clustering_analysis_tool', 'get_advanced_deduplication_metrics_tool',
-    'run_advanced_deduplication_tool'
+    'run_advanced_deduplication_tool',
+    # Document Management Tools
+    'delete_document_tool', 'demote_importance_tool', 'update_document_tool'
 ]

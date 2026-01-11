@@ -2,6 +2,7 @@ import pytest
 import time
 import asyncio
 
+
 @pytest.mark.performance
 @pytest.mark.asyncio
 async def test_memory_stress(running_mcp_server, memory_monitor, data_generator):
@@ -35,18 +36,21 @@ async def test_memory_stress(running_mcp_server, memory_monitor, data_generator)
                 "k": 1
             })
 
-        await asyncio.sleep(0.5) # Brief pause
+        await asyncio.sleep(0.5)  # Brief pause
 
     memory_stats = memory_monitor.stop_monitoring()
 
-    print(f"\n--- Memory Stress Test Results ---")
+    print("\n--- Memory Stress Test Results ---")
     print(f"Total Documents Added: {document_count}")
     if memory_stats.get('process_memory'):
         pm = memory_stats['process_memory']
-        print(f"Process Memory (Min/Max/Avg/Final): {pm['min_mb']:.1f} / {pm['max_mb']:.1f} / {pm['avg_mb']:.1f} / {pm['final_mb']:.1f} MB")
+        print(
+            f"Process Memory (Min/Max/Avg/Final): {pm['min_mb']:.1f} / {pm['max_mb']:.1f} / "
+            f"{pm['avg_mb']:.1f} / {pm['final_mb']:.1f} MB"
+        )
         if document_count > 0:
             print(f"Memory per Document (Peak): {pm['max_mb'] / document_count:.3f} MB/doc")
-    
+
     assert document_count > 0, "No documents were added during the stress test."
     # Memory tracking is optional - may fail if process detection doesn't work
     max_memory = memory_stats.get('process_memory', {}).get('max_mb', 0)

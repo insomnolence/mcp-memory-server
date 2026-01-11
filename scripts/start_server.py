@@ -40,14 +40,19 @@ def main():
     
     config = Config(config_path=config_file, domain=domain)
     server_config = config.get_server_config()
-    
+
     host = server_config.get('host', '127.0.0.1')
     port = server_config.get('port', 8080)
-    
+
     print(f"Starting Enhanced MCP Memory Server")
-    print(f"Configuration loaded from: {config.config_path}")
     if domain:
         print(f"Domain configuration: {domain}")
+    elif config_file:
+        print(f"Configuration loaded from: {config_file}")
+    elif hasattr(config, 'config_path'):
+        print(f"Configuration loaded from: {config.config_path}")
+    else:
+        print(f"Using default configuration")
     print(f"Database location: {config.get('database', 'persist_directory')}")
     print(f"Embedding model: {config.get('embeddings', 'model_name')}")
     print(f"Server starting on: http://{host}:{port}")
@@ -60,7 +65,7 @@ def main():
         "mcp_memory_server.main:app",  # Use import string for reload capability
         host=host,
         port=port,
-        reload=True,  # Enable auto-reload for development
+        reload=False,  # Enable auto-reload for development
         log_level=config.get('logging', 'level', default='info').lower()
     )
 

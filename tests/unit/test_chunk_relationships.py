@@ -5,6 +5,8 @@ from src.mcp_memory_server.memory.chunk_relationships import ChunkRelationshipMa
 from langchain_core.documents import Document
 
 # Fixture for a mock HierarchicalMemorySystem
+
+
 @pytest.fixture
 def mock_memory_system():
     mock_system = Mock()
@@ -16,6 +18,8 @@ def mock_memory_system():
     return mock_system
 
 # Fixture for ChunkRelationshipManager configuration
+
+
 @pytest.fixture
 def chunk_manager_config():
     return {
@@ -33,18 +37,21 @@ def chunk_manager_config():
     }
 
 # Fixture for ChunkRelationshipManager instance
+
+
 @pytest.fixture
 def chunk_relationship_manager(mock_memory_system, chunk_manager_config):
     # Mock the deduplicator's similarity_calculator for semantic checks
     mock_deduplicator = Mock()
     mock_deduplicator.similarity_calculator = Mock()
-    mock_deduplicator.similarity_calculator.calculate_similarity.return_value = 0.9 # Default high similarity
+    mock_deduplicator.similarity_calculator.calculate_similarity.return_value = 0.9  # Default high similarity
     mock_deduplicator.similarity_calculator.find_similar_candidates.return_value = []
 
     # Patch the HierarchicalMemorySystem to return our mock deduplicator
-    with patch('src.mcp_memory_server.memory.hierarchical.HierarchicalMemorySystem', return_value=mock_memory_system):
+    patch_target = 'src.mcp_memory_server.memory.services.facade.HierarchicalMemorySystem'
+    with patch(patch_target, return_value=mock_memory_system):
         manager = ChunkRelationshipManager(mock_memory_system, chunk_manager_config)
-        manager.memory_system.deduplicator = mock_deduplicator # Inject mock deduplicator
+        manager.memory_system.deduplicator = mock_deduplicator  # Inject mock deduplicator
         return manager
 
 
@@ -82,7 +89,7 @@ class TestChunkRelationshipManager:
             'documents': ["content"],
             'metadatas': [{'chunk_id': doc_id}]  # 'relationships' no longer in ChromaDB metadata
         }
-        
+
         related = chunk_relationship_manager.retrieve_related_chunks(doc_id)
         assert len(related) == 0
 
@@ -105,9 +112,9 @@ class TestChunkRelationshipManager:
 
         # Mock the similarity search to return the related document
         chunk_relationship_manager.memory_system.short_term_memory.similarity_search_with_score.return_value = [
-            (Document(page_content=content2, metadata={'chunk_id': chunk_id2}), 0.1) # distance
+            (Document(page_content=content2, metadata={'chunk_id': chunk_id2}), 0.1)  # distance
         ]
-        
+
         # Set up internal relationship data to simulate the relationship
         chunk_relationship_manager.chunk_relationships[chunk_id1] = {
             'chunk_id': chunk_id1,
@@ -127,7 +134,7 @@ class TestChunkRelationshipManager:
             'relationship_strength': {},
             'complex_relationships': {}
         }
-        
+
         # Also set up target chunk in relationships for completeness
         chunk_relationship_manager.chunk_relationships[chunk_id2] = {
             'chunk_id': chunk_id2,
@@ -153,7 +160,8 @@ class TestChunkRelationshipManager:
         candidate = Document(page_content="orange fruit", metadata={'chunk_id': 'doc2'})
 
         # Mock the similarity calculator to return a high similarity
-        chunk_relationship_manager.memory_system.deduplicator.similarity_calculator.calculate_similarity.return_value = 0.9
+        sim_calc = chunk_relationship_manager.memory_system.deduplicator.similarity_calculator
+        sim_calc.calculate_similarity.return_value = 0.9
 
         # Mock the update_document_metadata method and initialize chunk_relationships
         chunk_relationship_manager.memory_system.update_document_metadata = Mock()
@@ -189,11 +197,12 @@ class TestChunkRelationshipManager:
         assert 'doc1' in chunk_relationship_manager.chunk_relationships
         doc1_rel = chunk_relationship_manager.chunk_relationships['doc1']
         assert 'related_chunks' in doc1_rel
-        assert any(rel['target_chunk_id'] == 'doc2' and rel['type'] == 'co_occurrence' for rel in doc1_rel['related_chunks'])
+        assert any(rel['target_chunk_id'] == 'doc2' and rel['type'] ==
+                   'co_occurrence' for rel in doc1_rel['related_chunks'])
 
     def test_get_relationship_statistics(self, chunk_relationship_manager):
-        # Mock some documents and set up internal relationship data
-        chunk_relationship_manager.memory_system.short_term_memory.get.return_value = {
+        # Mock the _collection.get() method which is what the actual code calls
+        chunk_relationship_manager.memory_system.short_term_memory._collection.get.return_value = {
             'ids': ['c1', 'c2'],
             'documents': ['content1', 'content2'],
             'metadatas': [
@@ -201,7 +210,7 @@ class TestChunkRelationshipManager:
                 {'chunk_id': 'c2'}
             ]
         }
-        
+
         # Set up internal relationship data
         chunk_relationship_manager.chunk_relationships['c1'] = {
             'related_chunks': [{'type': 'semantic_similarity', 'score': 0.9}]
@@ -209,7 +218,7 @@ class TestChunkRelationshipManager:
         chunk_relationship_manager.chunk_relationships['c2'] = {
             'related_chunks': []
         }
-        chunk_relationship_manager.memory_system.long_term_memory.get.return_value = {
+        chunk_relationship_manager.memory_system.long_term_memory._collection.get.return_value = {
             'ids': [], 'documents': [], 'metadatas': []
         }
 
