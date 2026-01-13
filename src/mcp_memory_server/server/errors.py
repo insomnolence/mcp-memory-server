@@ -213,15 +213,16 @@ def create_success_response(
     return success_response
 
 
-def wrap_tool_execution(func):
+def wrap_tool_execution(func: Any) -> Any:
     """Decorator to wrap tool functions with standardized error handling.
 
     This decorator catches all exceptions and converts them to standardized
     JSON-RPC error responses.
     """
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
         try:
-            return func(*args, **kwargs)
+            result = func(*args, **kwargs)
+            return dict(result) if result else {}
         except Exception as e:
             return create_tool_error(
                 message=f"Tool execution failed: {str(e)}",
@@ -235,9 +236,10 @@ def wrap_tool_execution(func):
 
     # Preserve async functions
     if hasattr(func, '__code__') and func.__code__.co_flags & 0x80:  # CO_COROUTINE
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
             try:
-                return await func(*args, **kwargs)
+                result = await func(*args, **kwargs)
+                return dict(result) if result else {}
             except Exception as e:
                 return create_tool_error(
                     message=f"Tool execution failed: {str(e)}",

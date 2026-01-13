@@ -6,11 +6,11 @@ predictive analytics, and optimization recommendations.
 """
 
 import logging
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from ..server.errors import create_success_response, create_tool_error, MCPErrorCode
 
 
-def get_comprehensive_analytics_tool(memory_system) -> dict:
+def get_comprehensive_analytics_tool(memory_system: Any) -> Dict[str, Any]:
     """Get comprehensive system analytics with intelligence insights.
 
     Args:
@@ -49,7 +49,7 @@ def get_comprehensive_analytics_tool(memory_system) -> dict:
         )
 
 
-def get_system_intelligence_tool(memory_system, focus_area: str = "all") -> dict:
+def get_system_intelligence_tool(memory_system: Any, focus_area: str = "all") -> Dict[str, Any]:
     """Get system intelligence insights for a specific focus area.
 
     Args:
@@ -119,7 +119,7 @@ def get_system_intelligence_tool(memory_system, focus_area: str = "all") -> dict
         )
 
 
-def get_optimization_recommendations_tool(memory_system, priority_filter: str = "all") -> dict:
+def get_optimization_recommendations_tool(memory_system: Any, priority_filter: str = "all") -> Dict[str, Any]:
     """Get intelligent optimization recommendations.
 
     Args:
@@ -151,8 +151,8 @@ def get_optimization_recommendations_tool(memory_system, priority_filter: str = 
             filtered_recommendations = all_recommendations
 
         # Add summary statistics
-        priority_counts = {}
-        category_counts = {}
+        priority_counts: Dict[str, int] = {}
+        category_counts: Dict[str, int] = {}
 
         for rec in all_recommendations:
             priority = rec.get('priority', 'unknown')
@@ -190,7 +190,7 @@ def get_optimization_recommendations_tool(memory_system, priority_filter: str = 
         )
 
 
-def get_predictive_insights_tool(memory_system, prediction_type: str = "all") -> dict:
+def get_predictive_insights_tool(memory_system: Any, prediction_type: str = "all") -> Dict[str, Any]:
     """Get predictive analytics insights.
 
     Note: Predictive analytics has been deprecated as it was over-engineered
@@ -215,7 +215,7 @@ def get_predictive_insights_tool(memory_system, prediction_type: str = "all") ->
     )
 
 
-def get_chunk_relationships_tool(memory_system, document_id: Optional[str] = None) -> dict:
+def get_chunk_relationships_tool(memory_system: Any, document_id: Optional[str] = None) -> Dict[str, Any]:
     """Get chunk relationship statistics and analysis.
 
     Args:
@@ -276,7 +276,7 @@ def get_chunk_relationships_tool(memory_system, document_id: Optional[str] = Non
         )
 
 
-def get_system_health_assessment_tool(memory_system) -> dict:
+def get_system_health_assessment_tool(memory_system: Any) -> Dict[str, Any]:
     """Get comprehensive system health assessment with intelligence insights.
 
     Args:
@@ -344,9 +344,9 @@ def get_system_health_assessment_tool(memory_system) -> dict:
         )
 
 
-def _calculate_overall_health(analytics: dict) -> dict:
+def _calculate_overall_health(analytics: Dict[str, Any]) -> Dict[str, Any]:
     """Calculate overall system health from analytics data."""
-    health = {
+    health: Dict[str, Any] = {
         "score": 0.7,  # Default decent health
         "status": "good",
         "factors": {}

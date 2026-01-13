@@ -19,7 +19,7 @@ from langchain_chroma import Chroma
 try:
     from chromadb.errors import ChromaError
 except ImportError:
-    ChromaError = Exception
+    ChromaError = Exception  # type: ignore[misc, assignment]
 
 
 class MemoryQueryService:
@@ -29,13 +29,13 @@ class MemoryQueryService:
         self,
         short_term_memory: Chroma,
         long_term_memory: Chroma,
-        routing_service,
-        importance_scorer,
-        chunk_manager,
-        query_monitor,
-        deduplicator,
+        routing_service: Any,
+        importance_scorer: Any,
+        chunk_manager: Any,
+        query_monitor: Any,
+        deduplicator: Any,
         config: Optional[Dict[str, Any]] = None
-    ):
+    ) -> None:
         """Initialize query service.
 
         Args:
@@ -261,7 +261,7 @@ class MemoryQueryService:
             if hours_since_access < 24:
                 recency_boost = 0.05 * (1 - hours_since_access / 24)
 
-        return min(base_score + dedup_boost + recency_boost, 1.0)
+        return float(min(base_score + dedup_boost + recency_boost, 1.0))
 
     def _update_access_stats(self, results: List[Dict[str, Any]]) -> None:
         """Update access statistics for retrieved memories.

@@ -1,7 +1,10 @@
 
 
-def add_document_tool(memory_system, content: str, metadata: dict = None, language: str = "text",
-                      memory_type: str = "auto", context: dict = None) -> dict:
+from typing import Any, Dict, Optional
+
+
+def add_document_tool(memory_system: Any, content: str, metadata: Optional[Dict[str, Any]] = None, language: str = "text",
+                      memory_type: str = "auto", context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Add a document to the hierarchical memory system.
 
     Args:
@@ -30,6 +33,6 @@ def add_document_tool(memory_system, content: str, metadata: dict = None, langua
             memory_type=memory_type
         )
 
-        return result
+        return dict(result)
     except Exception as e:
         raise Exception(f"Failed to add document: {str(e)}")

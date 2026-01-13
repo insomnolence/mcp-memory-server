@@ -21,7 +21,7 @@ from typing import Dict, Any, List, Optional
 class MemoryIntelligenceSystem:
     """Analytics system for memory optimization monitoring."""
 
-    def __init__(self, memory_system, analytics_config: Optional[dict] = None):
+    def __init__(self, memory_system: Any, analytics_config: Optional[Dict[str, Any]] = None) -> None:
         """Initialize the intelligence system.
 
         Args:
@@ -32,8 +32,8 @@ class MemoryIntelligenceSystem:
         self.config = analytics_config or self._get_default_config()
 
         # Analytics tracking
-        self.analytics_history = []
-        self.optimization_recommendations = []
+        self.analytics_history: List[Dict[str, Any]] = []
+        self.optimization_recommendations: List[Dict[str, Any]] = []
 
         # Start time for uptime tracking
         self.system_start_time = time.time()
@@ -67,10 +67,12 @@ class MemoryIntelligenceSystem:
         }
 
         # Store analytics in history
+        system_overview = analytics.get('system_overview', {})
+        health_assessment = analytics.get('system_health_assessment', {})
         self.analytics_history.append({
             'timestamp': current_time,
-            'total_documents': analytics['system_overview'].get('total_documents', 0),
-            'health_score': analytics['system_health_assessment'].get('overall_score', 0),
+            'total_documents': system_overview.get('total_documents', 0) if isinstance(system_overview, dict) else 0,
+            'health_score': health_assessment.get('overall_score', 0) if isinstance(health_assessment, dict) else 0,
         })
 
         # Cleanup old history
@@ -228,7 +230,7 @@ class MemoryIntelligenceSystem:
 
     def _generate_optimization_recommendations(self) -> List[Dict[str, Any]]:
         """Generate actionable optimization recommendations based on system state."""
-        recommendations = []
+        recommendations: List[Dict[str, Any]] = []
         current_time = time.time()
 
         try:
@@ -412,7 +414,7 @@ class MemoryIntelligenceSystem:
         else:
             return 'minimal'
 
-    def _cleanup_analytics_history(self):
+    def _cleanup_analytics_history(self) -> None:
         """Cleanup old analytics history based on retention policy."""
         if not self.analytics_history:
             return

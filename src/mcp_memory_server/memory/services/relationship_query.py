@@ -22,14 +22,14 @@ class RelationshipQueryService:
 
     def __init__(
         self,
-        memory_system,
+        memory_system: Any,
         chunk_relationships: Dict[str, Any],
         document_relationships: Dict[str, Any],
-        merge_history_service,
+        merge_history_service: Any,
         config: Dict[str, Any],
         load_chunk_callback: Callable[[str], bool],
         load_document_callback: Callable[[str], bool]
-    ):
+    ) -> None:
         """Initialize the query service.
 
         Args:
@@ -206,11 +206,11 @@ class RelationshipQueryService:
 
         # Collect stats directly from ChromaDB
         total_chunks = 0
-        unique_document_ids = set()
-        document_chunk_counts = {}
-        document_creation_times = {}
+        unique_document_ids: set[str] = set()
+        document_chunk_counts: Dict[str, int] = {}
+        document_creation_times: Dict[str, float] = {}
         total_relationships_found = 0
-        relationship_types = {}
+        relationship_types: Dict[str, int] = {}
 
         try:
             for collection in ['short_term_memory', 'long_term_memory']:
@@ -340,7 +340,7 @@ class RelationshipQueryService:
                             zip(result['ids'], result['documents'])
                         ):
                             if id_val == chunk_id:
-                                return doc_content
+                                return str(doc_content) if doc_content else None
         except Exception as e:
             logging.debug(f"Error finding chunk content for {chunk_id}: {e}")
         return None
@@ -357,7 +357,7 @@ class RelationshipQueryService:
         Returns:
             Cleanup statistics
         """
-        stats = {
+        stats: Dict[str, Any] = {
             'chunks_cleaned': 0,
             'documents_cleaned': 0,
             'orphaned_relationships_cleaned': 0,
@@ -369,11 +369,11 @@ class RelationshipQueryService:
             for doc_id in deleted_ids:
                 if doc_id in self.document_relationships:
                     del self.document_relationships[doc_id]
-                    stats['documents_cleaned'] += 1
+                    stats['documents_cleaned'] = int(stats['documents_cleaned']) + 1
 
                 if doc_id in self.chunk_relationships:
                     del self.chunk_relationships[doc_id]
-                    stats['chunks_cleaned'] += 1
+                    stats['chunks_cleaned'] = int(stats['chunks_cleaned']) + 1
 
                 chunk_ids_to_remove = [
                     cid for cid in self.chunk_relationships
@@ -381,7 +381,7 @@ class RelationshipQueryService:
                 ]
                 for chunk_id in chunk_ids_to_remove:
                     del self.chunk_relationships[chunk_id]
-                    stats['chunks_cleaned'] += 1
+                    stats['chunks_cleaned'] = int(stats['chunks_cleaned']) + 1
 
             logging.info(
                 f"Targeted cleanup: removed {stats['documents_cleaned']} documents, "
@@ -407,7 +407,7 @@ class RelationshipQueryService:
             ]
             for chunk_id in orphaned_chunks:
                 del self.chunk_relationships[chunk_id]
-                stats['chunks_cleaned'] += 1
+                stats['chunks_cleaned'] = int(stats['chunks_cleaned']) + 1
 
             valid_doc_ids = set()
             for chunk_id in valid_chunk_ids:
@@ -423,7 +423,7 @@ class RelationshipQueryService:
             ]
             for doc_id in orphaned_docs:
                 del self.document_relationships[doc_id]
-                stats['documents_cleaned'] += 1
+                stats['documents_cleaned'] = int(stats['documents_cleaned']) + 1
 
             for chunk_id, chunk_rel in self.chunk_relationships.items():
                 related_chunks = chunk_rel.get('related_chunks', [])
@@ -433,7 +433,7 @@ class RelationshipQueryService:
                 ]
                 if len(valid_related) < len(related_chunks):
                     removed = len(related_chunks) - len(valid_related)
-                    stats['orphaned_relationships_cleaned'] += removed
+                    stats['orphaned_relationships_cleaned'] = int(stats['orphaned_relationships_cleaned']) + removed
                     chunk_rel['related_chunks'] = valid_related
 
             logging.info(

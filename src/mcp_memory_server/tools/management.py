@@ -5,7 +5,7 @@ These tools provide manual control over document lifecycle:
 - demote_importance: Lower a document's importance to allow TTL expiry
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from ..memory import HierarchicalMemorySystem
 from ..memory.lifecycle import LifecycleManager
 from ..server.errors import create_success_response, create_tool_error, MCPErrorCode
@@ -79,7 +79,7 @@ async def demote_importance_tool(
     lifecycle_manager: LifecycleManager,
     document_id: str,
     new_importance: float = 0.5,
-    reason: str = None
+    reason: Optional[str] = None
 ) -> Dict[str, Any]:
     """Demote a document's importance score to allow TTL expiry.
 
@@ -156,7 +156,7 @@ async def update_document_tool(
     memory_system: HierarchicalMemorySystem,
     document_id: str,
     content: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
     preserve_importance: bool = True
 ) -> Dict[str, Any]:
     """Update a document's content in the memory system.

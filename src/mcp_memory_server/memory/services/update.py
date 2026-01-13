@@ -9,7 +9,7 @@ Handles CRUD operations for documents including:
 
 import time
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from langchain_chroma import Chroma
 
@@ -21,10 +21,10 @@ class DocumentUpdateService:
         self,
         short_term_memory: Chroma,
         long_term_memory: Chroma,
-        chunk_manager,
-        lifecycle_manager=None,
-        storage_service=None
-    ):
+        chunk_manager: Any,
+        lifecycle_manager: Any = None,
+        storage_service: Any = None
+    ) -> None:
         """Initialize update service.
 
         Args:
@@ -40,11 +40,11 @@ class DocumentUpdateService:
         self.lifecycle_manager = lifecycle_manager
         self.storage_service = storage_service
 
-    def set_lifecycle_manager(self, lifecycle_manager):
+    def set_lifecycle_manager(self, lifecycle_manager: Any) -> None:
         """Set the lifecycle manager for TTL recalculation."""
         self.lifecycle_manager = lifecycle_manager
 
-    def set_storage_service(self, storage_service):
+    def set_storage_service(self, storage_service: Any) -> None:
         """Set the storage service for add_memory calls."""
         self.storage_service = storage_service
 
@@ -76,21 +76,24 @@ class DocumentUpdateService:
         # Search both collections for the document
         for collection_name in ["short_term", "long_term"]:
             collection = self._get_collection(collection_name)
+            if collection is None:
+                continue
 
             try:
                 if hasattr(collection, '_collection'):
                     # Get all documents and filter by document_id
-                    all_docs = collection._collection.get()
+                    all_docs = collection._collection.get()  # type: ignore[union-attr]
 
-                    ids_to_delete = []
-                    for i, metadata in enumerate(all_docs.get('metadatas', [])):
+                    ids_to_delete: List[str] = []
+                    metadatas = all_docs.get('metadatas') or []
+                    for i, metadata in enumerate(metadatas):
                         if metadata:
                             doc_id = metadata.get('document_id') or metadata.get('memory_id')
                             if doc_id == document_id:
                                 ids_to_delete.append(all_docs['ids'][i])
 
                     if ids_to_delete:
-                        collection._collection.delete(ids=ids_to_delete)
+                        collection._collection.delete(ids=ids_to_delete)  # type: ignore[union-attr]
 
                         # Clean up chunk relationships if available
                         if self.chunk_manager:
@@ -160,12 +163,12 @@ class DocumentUpdateService:
 
             try:
                 if hasattr(collection, '_collection'):
-                    all_docs = collection._collection.get()
+                    all_docs = collection._collection.get()  # type: ignore[union-attr]
 
                     ids_to_update = []
                     old_metadata_list = []
 
-                    for i, metadata in enumerate(all_docs.get('metadatas', [])):
+                    for i, metadata in enumerate(all_docs.get('metadatas', []) or []):  # type: ignore[arg-type]
                         if metadata:
                             doc_id = metadata.get('document_id') or metadata.get('memory_id')
                             if doc_id == document_id:
@@ -197,7 +200,7 @@ class DocumentUpdateService:
                             new_metadatas.append(updated_meta)
 
                         # Update in ChromaDB
-                        collection._collection.update(
+                        collection._collection.update(  # type: ignore[union-attr]
                             ids=ids_to_update,
                             metadatas=new_metadatas
                         )
@@ -269,21 +272,21 @@ class DocumentUpdateService:
             try:
                 if hasattr(collection, '_collection'):
                     # Query by chunk_id metadata field
-                    query_result = collection._collection.get(
+                    query_result = collection._collection.get(  # type: ignore[union-attr]
                         where={'chunk_id': chunk_id}
                     )
 
                     if query_result and query_result.get('ids') and len(query_result['ids']) > 0:
-                        chromadb_id = query_result['ids'][0]
-                        existing_metadata = query_result['metadatas'][0] if query_result.get('metadatas') else {}
+                        chromadb_id = query_result['ids'][0]  # type: ignore[index]
+                        existing_metadata = query_result['metadatas'][0] if query_result.get('metadatas') else {}  # type: ignore[index]
 
                         # Merge existing metadata with updates
-                        updated_metadata = existing_metadata.copy()
+                        updated_metadata = dict(existing_metadata)  # type: ignore[arg-type]
                         updated_metadata.update(metadata_updates)
                         updated_metadata['metadata_updated_at'] = time.time()
 
                         # Update in ChromaDB
-                        collection._collection.update(
+                        collection._collection.update(  # type: ignore[union-attr]
                             ids=[chromadb_id],
                             metadatas=[updated_metadata]
                         )
@@ -356,17 +359,18 @@ class DocumentUpdateService:
             collection = self._get_collection(collection_name)
             try:
                 if hasattr(collection, '_collection'):
-                    all_docs = collection._collection.get()
-                    for i, metadata in enumerate(all_docs.get('metadatas', [])):
+                    all_docs = collection._collection.get()  # type: ignore[union-attr]
+                    for i, metadata in enumerate(all_docs.get('metadatas', []) or []):  # type: ignore[arg-type]
                         if metadata:
                             doc_id = metadata.get('document_id') or metadata.get('memory_id')
                             if doc_id == document_id:
+                                docs_list = all_docs.get('documents', [None]) or [None]
                                 existing_doc = {
-                                    'id': all_docs['ids'][i],
-                                    'content': all_docs.get('documents', [None])[i],
+                                    'id': all_docs['ids'][i],  # type: ignore[index]
+                                    'content': docs_list[i],  # type: ignore[index]
                                     'metadata': metadata
                                 }
-                                existing_metadata = metadata.copy()
+                                existing_metadata = dict(metadata)  # type: ignore[arg-type]
                                 source_collection = collection_name
                                 break
                 if existing_doc:

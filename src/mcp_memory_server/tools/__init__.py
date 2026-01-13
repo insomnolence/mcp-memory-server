@@ -1,4 +1,4 @@
-
+from typing import Any, Dict, Optional
 from ..memory import HierarchicalMemorySystem
 from ..server.errors import create_tool_error, create_success_response, MCPErrorCode
 
@@ -46,8 +46,8 @@ from .management import (
 )
 
 
-async def add_document_tool(memory_system: HierarchicalMemorySystem, content: str, metadata: dict = None,
-                            context: dict = None, language: str = "text", memory_type: str = "auto") -> dict:
+async def add_document_tool(memory_system: HierarchicalMemorySystem, content: str, metadata: Optional[Dict[str, Any]] = None,
+                            context: Optional[Dict[str, Any]] = None, language: str = "text", memory_type: str = "auto") -> Dict[str, Any]:
     """Adds a new document (memory entry) to the hierarchical memory system.
     Automatically scores importance and routes to appropriate memory tiers.
     """

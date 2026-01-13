@@ -7,7 +7,7 @@ Provides insights into system efficiency and user experience.
 
 import time
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Deque, DefaultDict
 from collections import defaultdict, deque
 import statistics
 
@@ -15,7 +15,7 @@ import statistics
 class QueryPerformanceMonitor:
     """Monitors query performance and tracks improvements from deduplication."""
 
-    def __init__(self, config: dict = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
         """Initialize query performance monitor.
 
         Args:
@@ -24,12 +24,12 @@ class QueryPerformanceMonitor:
         self.config = config or self._get_default_config()
 
         # Performance tracking
-        self.query_history = deque(maxlen=self.config['history_size'])
-        self.performance_metrics = defaultdict(list)
+        self.query_history: Deque[Dict[str, Any]] = deque(maxlen=self.config['history_size'])
+        self.performance_metrics: DefaultDict[str, List[Any]] = defaultdict(list)
 
         # Statistics aggregation
-        self.hourly_stats = defaultdict(lambda: defaultdict(list))
-        self.daily_stats = defaultdict(lambda: defaultdict(list))
+        self.hourly_stats: DefaultDict[int, DefaultDict[str, List[Any]]] = defaultdict(lambda: defaultdict(list))
+        self.daily_stats: DefaultDict[int, DefaultDict[str, List[Any]]] = defaultdict(lambda: defaultdict(list))
 
         # Start time for relative measurements
         self.start_time = time.time()
@@ -51,8 +51,8 @@ class QueryPerformanceMonitor:
             }
         }
 
-    def track_query(self, query: str, results: dict, processing_time: float,
-                    metadata: dict = None) -> str:
+    def track_query(self, query: str, results: Dict[str, Any], processing_time: float,
+                    metadata: Optional[Dict[str, Any]] = None) -> str:
         """Track a query execution and its results.
 
         Args:
@@ -97,7 +97,7 @@ class QueryPerformanceMonitor:
 
         return query_id
 
-    def _calculate_query_metrics(self, query_record: dict, results: dict):
+    def _calculate_query_metrics(self, query_record: Dict[str, Any], results: Dict[str, Any]) -> None:
         """Calculate performance metrics for a query."""
         processing_time_ms = query_record['processing_time_ms']
 
@@ -196,7 +196,7 @@ class QueryPerformanceMonitor:
 
         return impact
 
-    def _update_aggregated_stats(self, query_record: dict):
+    def _update_aggregated_stats(self, query_record: Dict[str, Any]) -> None:
         """Update hourly and daily aggregated statistics."""
         current_time = query_record['timestamp']
         hour_key = int(current_time // 3600)
@@ -387,7 +387,7 @@ class QueryPerformanceMonitor:
         if dedup_usage > 0:
             health_score += min(dedup_usage / len(recent_queries) * 0.1, 0.1)
 
-        return min(max(health_score, 0.0), 1.0)
+        return float(min(max(health_score, 0.0), 1.0))
 
     def export_metrics(self, format: str = 'dict') -> Any:
         """Export performance metrics in specified format.

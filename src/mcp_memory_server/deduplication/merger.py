@@ -14,13 +14,13 @@ from typing import Dict, Any, List, Tuple, Optional
 class DocumentMerger:
     """Handles merging of duplicate documents with metadata preservation."""
 
-    def __init__(self, chunk_manager=None):
+    def __init__(self, chunk_manager: Any = None) -> None:
         """Initialize document merger.
 
         Args:
             chunk_manager: ChunkRelationshipManager instance for handling relationships
         """
-        self.merge_history = []
+        self.merge_history: List[Dict[str, Any]] = []
         self.chunk_manager = chunk_manager
 
     def choose_best_document(self, doc1: Dict[str, Any], doc2: Dict[str, Any]) -> Dict[str, Any]:
@@ -155,7 +155,7 @@ class DocumentMerger:
         if permanence_reasons:
             merged_metadata['permanence_reason'] = ', '.join(permanence_reasons)
 
-        return merged_metadata
+        return dict(merged_metadata)
 
     def _merge_ttl_tiers(self, tier1: Optional[str], tier2: Optional[str]) -> str:
         """Merge TTL tiers, choosing the more permanent one."""

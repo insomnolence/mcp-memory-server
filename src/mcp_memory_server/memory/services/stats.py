@@ -21,10 +21,10 @@ class MemoryStatsService:
         self,
         short_term_memory: Chroma,
         long_term_memory: Chroma,
-        query_monitor,
-        intelligence_system,
-        chunk_manager
-    ):
+        query_monitor: Any,
+        intelligence_system: Any,
+        chunk_manager: Any
+    ) -> None:
         """Initialize stats service.
 
         Args:
@@ -67,7 +67,7 @@ class MemoryStatsService:
         Returns:
             Dictionary with collection statistics
         """
-        stats = {"collections": {}}
+        stats: Dict[str, Any] = {"collections": {}}
 
         collections = self._get_all_collections()
 
@@ -103,7 +103,8 @@ class MemoryStatsService:
             Query performance statistics
         """
         try:
-            return self.query_monitor.get_performance_summary(time_window)
+            result = self.query_monitor.get_performance_summary(time_window)
+            return dict(result) if result else {}
         except Exception as e:
             logging.warning(f"Failed to get query performance stats: {e}")
             return {'error': str(e), 'message': 'Query monitoring not available'}
@@ -115,7 +116,8 @@ class MemoryStatsService:
             Comprehensive analytics including predictions and recommendations
         """
         try:
-            return self.intelligence_system.generate_comprehensive_analytics()
+            result = self.intelligence_system.generate_comprehensive_analytics()
+            return dict(result) if result else {}
         except Exception as e:
             logging.warning(f"Failed to get comprehensive analytics: {e}")
             return {'error': str(e), 'message': 'Analytics system not available'}
@@ -128,7 +130,8 @@ class MemoryStatsService:
         """
         try:
             if self.chunk_manager:
-                return self.chunk_manager.get_relationship_statistics()
+                result = self.chunk_manager.get_relationship_statistics()
+                return dict(result) if result else {}
             else:
                 return {'error': 'Chunk relationship manager not available'}
         except Exception as e:

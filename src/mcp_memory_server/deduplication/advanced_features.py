@@ -8,13 +8,13 @@ and automated threshold optimization based on performance metrics.
 import time
 import logging
 import statistics
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 
 class AdvancedDeduplicationFeatures:
     """Advanced features for the deduplication system."""
 
-    def __init__(self, deduplicator, advanced_config: dict = None):
+    def __init__(self, deduplicator: Any, advanced_config: Optional[Dict[str, Any]] = None) -> None:
         """Initialize advanced deduplication features.
 
         Args:
@@ -25,16 +25,16 @@ class AdvancedDeduplicationFeatures:
         self.config = advanced_config or self._get_default_config()
 
         # Domain-specific thresholds
-        self.domain_thresholds = self.config.get('domain_thresholds', {})
+        self.domain_thresholds: Dict[str, float] = self.config.get('domain_thresholds', {})
 
         # Effectiveness tracking
-        self.effectiveness_history = []
+        self.effectiveness_history: List[Dict[str, Any]] = []
 
         # Semantic clustering
-        self.semantic_clusters = {}
+        self.semantic_clusters: Dict[str, Any] = {}
 
         # Auto-optimization
-        self.threshold_optimization_history = []
+        self.threshold_optimization_history: List[Dict[str, Any]] = []
 
     def _get_default_config(self) -> dict:
         """Default configuration for advanced features."""
@@ -112,7 +112,7 @@ class AdvancedDeduplicationFeatures:
 
         # Check explicit domain in metadata
         if 'domain' in metadata:
-            return metadata['domain']
+            return str(metadata['domain'])
 
         # Check language field for code
         language = metadata.get('language', '').lower()
@@ -228,8 +228,8 @@ class AdvancedDeduplicationFeatures:
     def _build_semantic_clusters(self, similarity_pairs: List[tuple],
                                  clustering_config: dict) -> List[List[Dict[str, Any]]]:
         """Build clusters from similarity pairs using graph-based clustering."""
-        clusters = []
-        doc_to_cluster = {}
+        clusters: List[List[Dict[str, Any]]] = []
+        doc_to_cluster: Dict[int, List[Dict[str, Any]]] = {}
 
         for doc1_data, doc2_data, similarity in similarity_pairs:
             doc1 = doc1_data['document'] if 'document' in doc1_data else doc1_data
@@ -250,11 +250,13 @@ class AdvancedDeduplicationFeatures:
 
             elif cluster1 is None:
                 # Add doc1 to doc2's cluster
+                assert cluster2 is not None
                 cluster2.append(doc1)
                 doc_to_cluster[doc1_id] = cluster2
 
             elif cluster2 is None:
                 # Add doc2 to doc1's cluster
+                assert cluster1 is not None
                 cluster1.append(doc2)
                 doc_to_cluster[doc2_id] = cluster1
 
@@ -285,11 +287,15 @@ class AdvancedDeduplicationFeatures:
 
         cluster_sizes = [len(cluster) for cluster in clusters]
 
-        analysis = {
-            'cluster_count': len(clusters),
+        avg_cluster_size = statistics.mean(cluster_sizes)
+        largest_cluster_size = max(cluster_sizes)
+        cluster_count = len(clusters)
+        
+        analysis: Dict[str, Any] = {
+            'cluster_count': cluster_count,
             'total_documents_in_clusters': sum(cluster_sizes),
-            'average_cluster_size': statistics.mean(cluster_sizes),
-            'largest_cluster_size': max(cluster_sizes),
+            'average_cluster_size': avg_cluster_size,
+            'largest_cluster_size': largest_cluster_size,
             'cluster_size_distribution': {
                 'small': len([s for s in cluster_sizes if s <= 3]),
                 'medium': len([s for s in cluster_sizes if 4 <= s <= 10]),
@@ -298,18 +304,18 @@ class AdvancedDeduplicationFeatures:
         }
 
         # Generate insights
-        insights = []
-        if analysis['average_cluster_size'] > 5:
+        insights: List[str] = []
+        if avg_cluster_size > 5:
             insights.append("Large clusters detected - consider reviewing similarity thresholds")
-        if analysis['cluster_count'] > 20:
+        if cluster_count > 20:
             insights.append("Many clusters found - potential for significant optimization")
-        if analysis['largest_cluster_size'] > 15:
+        if largest_cluster_size > 15:
             insights.append("Very large cluster detected - may indicate overly broad similarity")
 
         analysis['insights'] = insights
         return analysis
 
-    def _cleanup_old_clusters(self):
+    def _cleanup_old_clusters(self) -> None:
         """Remove old semantic clusters based on retention policy."""
         current_time = time.time()
         clustering_config = self.config.get('semantic_clustering', self._get_default_config()['semantic_clustering'])
@@ -402,7 +408,8 @@ class AdvancedDeduplicationFeatures:
     def _calculate_current_effectiveness(self, performance_data: Dict[str, Any]) -> float:
         """Calculate current deduplication effectiveness."""
         dedup_stats = performance_data['dedup_stats']
-        return dedup_stats.get('deduplication_efficiency', 0) / 100.0
+        efficiency = dedup_stats.get('deduplication_efficiency', 0)
+        return float(efficiency) / 100.0
 
     def _determine_optimization_strategy(self, current_effectiveness: float,
                                          performance_data: Dict[str, Any]) -> str:
@@ -497,15 +504,15 @@ class AdvancedDeduplicationFeatures:
         """Calculate when the next optimization should run."""
         auto_opt_config = self.config.get('auto_optimization', self._get_default_config()['auto_optimization'])
         interval_hours = auto_opt_config.get('optimization_interval_hours', 168)
-        return time.time() + (interval_hours * 3600)
+        return float(time.time() + (float(interval_hours) * 3600))
 
-    def _cleanup_optimization_history(self):
+    def _cleanup_optimization_history(self) -> None:
         """Cleanup old optimization history."""
         # Keep last 10 optimization records
         if len(self.threshold_optimization_history) > 10:
             self.threshold_optimization_history = self.threshold_optimization_history[-10:]
 
-    def track_effectiveness(self, effectiveness_score: float, context: Dict[str, Any] = None):
+    def track_effectiveness(self, effectiveness_score: float, context: Optional[Dict[str, Any]] = None) -> None:
         """Track deduplication effectiveness over time.
 
         Args:
@@ -624,22 +631,22 @@ class AdvancedDeduplicationFeatures:
 
     def _calculate_domain_effectiveness(self) -> Dict[str, float]:
         """Calculate effectiveness scores by document domain."""
-        domain_effectiveness = {}
-
         if not self.effectiveness_history:
-            return domain_effectiveness
+            return {}
 
         # Group effectiveness records by domain if available
+        domain_scores: Dict[str, List[float]] = {}
         for record in self.effectiveness_history[-10:]:  # Last 10 records
             context = record.get('context', {})
             domain = context.get('domain', 'unknown')
 
-            if domain not in domain_effectiveness:
-                domain_effectiveness[domain] = []
-            domain_effectiveness[domain].append(record['effectiveness_score'])
+            if domain not in domain_scores:
+                domain_scores[domain] = []
+            domain_scores[domain].append(record['effectiveness_score'])
 
         # Calculate average effectiveness per domain
-        for domain, scores in domain_effectiveness.items():
+        domain_effectiveness: Dict[str, float] = {}
+        for domain, scores in domain_scores.items():
             domain_effectiveness[domain] = statistics.mean(scores) if scores else 0.0
 
         return domain_effectiveness

@@ -6,11 +6,12 @@ manual deduplication, statistics, and duplicate preview.
 """
 
 import logging
+from typing import Any, Dict, List
 from ..server.errors import create_success_response, create_tool_error, MCPErrorCode
 
 
-async def deduplicate_memories_tool(memory_system, collections: str = "short_term,long_term",
-                                    dry_run: bool = False) -> dict:
+async def deduplicate_memories_tool(memory_system: Any, collections: str = "short_term,long_term",
+                                    dry_run: bool = False) -> Dict[str, Any]:
     """Manually trigger deduplication process on specified collections.
 
     Args:
@@ -37,7 +38,7 @@ async def deduplicate_memories_tool(memory_system, collections: str = "short_ter
             )
 
         # Process each collection
-        total_results = {
+        total_results: Dict[str, Any] = {
             "success": True,
             "dry_run": dry_run,
             "collections_processed": [],
@@ -112,7 +113,7 @@ async def deduplicate_memories_tool(memory_system, collections: str = "short_ter
         )
 
 
-def get_deduplication_stats_tool(memory_system) -> dict:
+def get_deduplication_stats_tool(memory_system: Any) -> Dict[str, Any]:
     """Get comprehensive deduplication statistics.
 
     Args:
@@ -183,8 +184,8 @@ def get_deduplication_stats_tool(memory_system) -> dict:
         )
 
 
-async def preview_duplicates_tool(memory_system, collection: str = "short_term",
-                                  limit: int = 10) -> dict:
+async def preview_duplicates_tool(memory_system: Any, collection: str = "short_term",
+                                  limit: int = 10) -> Dict[str, Any]:
     """Preview potential duplicate documents without removing them.
 
     Args:

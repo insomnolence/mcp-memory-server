@@ -1,6 +1,7 @@
 import os
 import logging
 from functools import partial
+from typing import Any, Dict, Optional
 from sentence_transformers import CrossEncoder
 
 from .config import Config
@@ -25,7 +26,7 @@ from .tools import (
 )
 
 
-def main():
+def main() -> Any:
     """Main function to initialize and run the refactored MCP server."""
     # Configure logging - force reconfiguration even if logging was already initialized
     log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -143,8 +144,8 @@ def main():
     return app
 
 
-async def query_documents_with_reranking(memory_system, reranker_model, query: str,
-                                         collections: str = None, k: int = 5, use_reranker: bool = True) -> dict:
+async def query_documents_with_reranking(memory_system: Any, reranker_model: Any, query: str,
+                                         collections: Optional[str] = None, k: int = 5, use_reranker: bool = True) -> Dict[str, Any]:
     """Query documents with reranking support."""
     # Reranking is now handled inside query_documents_tool, so just call it directly
     return await query_documents_tool(memory_system, query, collections, k, use_reranker, reranker_model)
@@ -156,7 +157,7 @@ _global_app = None
 # Initialize app
 
 
-def get_app(config_path=None):
+def get_app(config_path: Optional[str] = None) -> Any:
     """Get or create the FastAPI app instance."""
     global _global_app
     if _global_app is None:

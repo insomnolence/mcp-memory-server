@@ -18,7 +18,7 @@ from .advanced_features import AdvancedDeduplicationFeatures
 class MemoryDeduplicator:
     """Main deduplication system for the hierarchical memory system."""
 
-    def __init__(self, deduplication_config: dict, chunk_manager=None):
+    def __init__(self, deduplication_config: Dict[str, Any], chunk_manager: Any = None) -> None:
         """Initialize deduplication system.
 
         Args:
@@ -49,8 +49,8 @@ class MemoryDeduplicator:
 
         logging.info(f"MemoryDeduplicator initialized with threshold {self.similarity_threshold}")
 
-    async def check_ingestion_duplicates(self, new_content: str, new_metadata: dict,
-                                         collection) -> Tuple[str, Optional[Dict], float]:
+    async def check_ingestion_duplicates(self, new_content: str, new_metadata: Dict[str, Any],
+                                         collection: Any) -> Tuple[str, Optional[Dict[str, Any]], float]:
         """Check for duplicates during ingestion to prevent storing redundant content.
 
         Args:
@@ -146,7 +146,7 @@ class MemoryDeduplicator:
 
         return len(intersection) / len(union)
 
-    async def deduplicate_collection(self, collection, dry_run: bool = False) -> Dict[str, Any]:
+    async def deduplicate_collection(self, collection: Any, dry_run: bool = False) -> Dict[str, Any]:
         """Perform batch deduplication on a collection.
 
         Main algorithm from docs/memory-deduplication-proposal.md
@@ -201,7 +201,7 @@ class MemoryDeduplicator:
                     'processing_time': processing_time
                 }
 
-            results = {
+            results: Dict[str, Any] = {
                 'duplicates_found': len(duplicate_pairs),
                 'documents_processed': len(all_docs),
                 'processing_time': time.time() - start_time,
@@ -210,8 +210,9 @@ class MemoryDeduplicator:
 
             if dry_run:
                 # Just return what would be done
+                dup_pairs_list: List[Dict[str, Any]] = results['duplicate_pairs']
                 for doc1, doc2, similarity in duplicate_pairs:
-                    results['duplicate_pairs'].append({
+                    dup_pairs_list.append({
                         'doc1_id': doc1.get('id'),
                         'doc2_id': doc2.get('id'),
                         'similarity': similarity,
@@ -332,20 +333,20 @@ class MemoryDeduplicator:
 
         return duplicates
 
-    def _update_stats(self, duplicate_pairs: List[Tuple], merged_docs: List[Dict]):
+    def _update_stats(self, duplicate_pairs: List[Tuple[Dict[str, Any], Dict[str, Any], float]], merged_docs: List[Dict[str, Any]]) -> None:
         """Update deduplication statistics.
 
         Args:
             duplicate_pairs: List of duplicate pairs found
             merged_docs: List of merged documents created
         """
-        self.stats['total_duplicates_found'] += len(duplicate_pairs)
-        self.stats['total_documents_merged'] += len(merged_docs)
+        self.stats['total_duplicates_found'] = int(self.stats['total_duplicates_found'] or 0) + len(duplicate_pairs)
+        self.stats['total_documents_merged'] = int(self.stats['total_documents_merged'] or 0) + len(merged_docs)
         self.stats['last_deduplication'] = time.time()
 
         # Estimate storage saved (simplified)
         storage_saved = len(duplicate_pairs) * 2 - len(merged_docs)  # Rough estimate
-        self.stats['total_storage_saved'] += storage_saved
+        self.stats['total_storage_saved'] = int(self.stats['total_storage_saved'] or 0) + storage_saved
 
     def get_deduplication_stats(self) -> Dict[str, Any]:
         """Get comprehensive deduplication statistics.
@@ -353,7 +354,7 @@ class MemoryDeduplicator:
         Returns:
             Dictionary with deduplication statistics and health metrics
         """
-        current_stats = self.stats.copy()
+        current_stats: Dict[str, Any] = dict(self.stats)
         current_stats.update({
             'enabled': self.enabled,
             'similarity_threshold': self.similarity_threshold,
@@ -366,7 +367,7 @@ class MemoryDeduplicator:
 
         return current_stats
 
-    async def preview_duplicates(self, collection) -> Dict[str, Any]:
+    async def preview_duplicates(self, collection: Any) -> Dict[str, Any]:
         """Preview potential duplicates without making changes.
 
         Args:
@@ -410,7 +411,7 @@ class MemoryDeduplicator:
 
         logging.info(f"Boosted existing document importance from {current_importance:.3f} to {boosted_importance:.3f}")
 
-        return updated_metadata
+        return dict(updated_metadata)
 
     def optimize_thresholds(self) -> Dict[str, Any]:
         """Optimize deduplication thresholds using advanced features.
@@ -435,7 +436,7 @@ class MemoryDeduplicator:
         )
 
         # Analyze domain distribution
-        domain_counts = {}
+        domain_counts: Dict[str, int] = {}
         for (threshold, reason), doc in zip(domain_thresholds, documents):
             domain = reason.replace('domain_', '') if reason.startswith('domain_') else reason
             domain_counts[domain] = domain_counts.get(domain, 0) + 1

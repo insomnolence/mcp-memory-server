@@ -1,7 +1,8 @@
+from typing import Any, Dict, List
 from ..server.errors import create_success_response, create_tool_error, MCPErrorCode
 
 
-def get_memory_stats_tool(memory_system) -> dict:
+def get_memory_stats_tool(memory_system: Any) -> Dict[str, Any]:
     """Get comprehensive statistics about the memory system including deduplication metrics.
 
     Args:
@@ -66,7 +67,7 @@ def get_memory_stats_tool(memory_system) -> dict:
         )
 
 
-def _format_stats_as_text(stats: dict) -> str:
+def _format_stats_as_text(stats: Dict[str, Any]) -> str:
     """Format statistics as human-readable text."""
     lines = ["# Memory System Statistics\n"]
 
@@ -89,9 +90,9 @@ def _format_stats_as_text(stats: dict) -> str:
     return "\n".join(lines)
 
 
-def _calculate_enhanced_metrics(stats: dict) -> dict:
+def _calculate_enhanced_metrics(stats: Dict[str, Any]) -> Dict[str, Any]:
     """Calculate enhanced system metrics from base statistics."""
-    enhanced = {
+    enhanced: Dict[str, Any] = {
         'total_documents': 0,
         'storage_efficiency': 0.0,
         'deduplication_impact': 0.0,
@@ -141,7 +142,7 @@ def _calculate_enhanced_metrics(stats: dict) -> dict:
     return enhanced
 
 
-def get_system_health_tool(memory_system, config) -> dict:
+def get_system_health_tool(memory_system: Any, config: Any) -> Dict[str, Any]:
     """Get comprehensive system health information with deduplication and performance metrics.
 
     Args:
@@ -245,9 +246,9 @@ def get_system_health_tool(memory_system, config) -> dict:
         )
 
 
-def _assess_system_optimization(memory_system) -> dict:
+def _assess_system_optimization(memory_system: Any) -> Dict[str, Any]:
     """Assess system optimization status."""
-    optimization = {
+    optimization: Dict[str, Any] = {
         'deduplication_active': False,
         'query_monitoring_active': False,
         'progressive_cleanup_active': False,
@@ -284,7 +285,7 @@ def _assess_system_optimization(memory_system) -> dict:
     return optimization
 
 
-def _generate_health_recommendations(health_score: float, optimization_status: dict) -> list:
+def _generate_health_recommendations(health_score: float, optimization_status: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Generate health improvement recommendations."""
     recommendations = []
 

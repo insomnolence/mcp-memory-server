@@ -5,10 +5,11 @@ Provides tools for accessing query performance metrics and real-time monitoring 
 """
 
 import logging
+from typing import Any, Dict, List
 from ..server.errors import create_success_response, create_tool_error, MCPErrorCode
 
 
-def get_query_performance_tool(memory_system, time_window: str = "day") -> dict:
+def get_query_performance_tool(memory_system: Any, time_window: str = "day") -> Dict[str, Any]:
     """Get query performance statistics for the specified time window.
 
     Args:
@@ -63,7 +64,7 @@ def get_query_performance_tool(memory_system, time_window: str = "day") -> dict:
         )
 
 
-def get_real_time_metrics_tool(memory_system) -> dict:
+def get_real_time_metrics_tool(memory_system: Any) -> Dict[str, Any]:
     """Get real-time performance metrics and system status.
 
     Args:
@@ -123,8 +124,8 @@ def get_real_time_metrics_tool(memory_system) -> dict:
         )
 
 
-def export_performance_data_tool(memory_system, format: str = "json",
-                                 time_window: str = "all") -> dict:
+def export_performance_data_tool(memory_system: Any, format: str = "json",
+                                 time_window: str = "all") -> Dict[str, Any]:
     """Export performance data in the specified format.
 
     Args:
@@ -192,9 +193,9 @@ def export_performance_data_tool(memory_system, format: str = "json",
         )
 
 
-def _interpret_performance_stats(stats: dict) -> dict:
+def _interpret_performance_stats(stats: Dict[str, Any]) -> Dict[str, Any]:
     """Interpret performance statistics and provide insights."""
-    insights = {
+    insights: Dict[str, Any] = {
         "performance_grade": "unknown",
         "key_metrics": {},
         "recommendations": [],
@@ -272,9 +273,9 @@ def _interpret_performance_stats(stats: dict) -> dict:
     return insights
 
 
-def _calculate_status_indicators(metrics: dict) -> dict:
+def _calculate_status_indicators(metrics: Dict[str, Any]) -> Dict[str, Any]:
     """Calculate system status indicators from real-time metrics."""
-    indicators = {
+    indicators: Dict[str, Any] = {
         "system_load": "normal",
         "response_health": "good",
         "query_activity": "normal",

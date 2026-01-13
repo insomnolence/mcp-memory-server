@@ -209,12 +209,12 @@ class MemoryImportanceScorer:
             permanence_boost += 0.25  # Default user explicit permanent boost
 
         # Legacy backward compatibility
-        legacy_bonus = 0
+        legacy_bonus: float = 0.0
         if self.legacy_content_scoring:
             legacy_bonus = self._calculate_legacy_bonus(content, metadata, context)
 
         # Combine all scoring factors
-        total_score = content_score + total_pattern_bonus + context_bonus + permanence_boost + legacy_bonus
+        total_score: float = content_score + total_pattern_bonus + context_bonus + permanence_boost + legacy_bonus
 
         # Respect explicit non-importance signal from caller
         # When is_important is explicitly False, cap score below permanent tier (0.95+)
@@ -222,7 +222,7 @@ class MemoryImportanceScorer:
         if context and context.get('is_important') is False:
             total_score = min(total_score, 0.94)
 
-        return min(1.0, total_score)
+        return float(min(1.0, total_score))
 
     def _calculate_legacy_bonus(self, content: str, metadata: Optional[Dict[str, Any]], context: Optional[Dict[str, Any]]) -> float:
         """Calculate legacy bonus scores for backward compatibility.
@@ -318,4 +318,4 @@ class MemoryImportanceScorer:
             importance_score * self.scoring_weights['importance']
         )
 
-        return total_score
+        return float(total_score)

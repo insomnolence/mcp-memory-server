@@ -130,7 +130,7 @@ class MergeHistoryService:
         merge_id = f"merge_{int(current_time * 1000)}"
 
         # Create merge record
-        merge_record = {
+        merge_record: Dict[str, Any] = {
             'merge_id': merge_id,
             'timestamp': current_time,
             'primary_document': primary_doc_id,
@@ -178,9 +178,8 @@ class MergeHistoryService:
                     # Mark merged document as consolidated
                     merged_rel['consolidated_into'] = primary_doc_id
                     merged_rel['consolidation_timestamp'] = current_time
-                    merge_record['preserved_relationships'].extend(
-                        merged_rel.get('related_documents', [])
-                    )
+                    preserved_rels: List[Any] = merge_record['preserved_relationships']
+                    preserved_rels.extend(merged_rel.get('related_documents', []))
 
             # Update primary document relationships
             primary_rel['related_documents'] = list(all_related_docs)
@@ -200,10 +199,11 @@ class MergeHistoryService:
             f"merged into {primary_doc_id}"
         )
 
+        preserved_list: List[Any] = merge_record.get('preserved_relationships', [])
         return {
             'merge_id': merge_id,
             'documents_merged': len(merged_doc_ids),
-            'relationships_preserved': len(merge_record['preserved_relationships']),
+            'relationships_preserved': len(preserved_list),
             'average_similarity': (
                 sum(similarity_scores) / len(similarity_scores)
                 if similarity_scores else 0.0

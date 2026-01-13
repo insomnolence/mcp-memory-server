@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Tuple, Optional
 class QueryRoutingService:
     """Service responsible for smart query routing decisions."""
 
-    def __init__(self, deduplicator, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, deduplicator: Any, config: Optional[Dict[str, Any]] = None) -> None:
         """Initialize routing service.
 
         Args:

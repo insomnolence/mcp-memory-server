@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, Response, Header, Depends, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, AsyncIterator
 from contextlib import asynccontextmanager
 import time
 import logging
@@ -17,7 +17,7 @@ from .handlers import (
 from .errors import MCPErrorCode, create_error_response
 
 
-async def validate_session_id(mcp_session_id: Optional[str] = Header(None)):
+async def validate_session_id(mcp_session_id: Optional[str] = Header(None)) -> str:
     if mcp_session_id is None:
         raise HTTPException(status_code=400, detail="Mcp-Session-Id header is required")
     if mcp_session_id not in active_sessions:
@@ -27,7 +27,7 @@ async def validate_session_id(mcp_session_id: Optional[str] = Header(None)):
     return mcp_session_id
 
 
-async def authenticate_api_key(x_api_key: Optional[str] = Header(None), server_config: dict = None):
+async def authenticate_api_key(x_api_key: Optional[str] = Header(None), server_config: Optional[Dict[str, Any]] = None) -> bool:
     """Validate API key if configured.
 
     If no API key is configured in server_config, authentication is bypassed.
@@ -48,7 +48,7 @@ async def authenticate_api_key(x_api_key: Optional[str] = Header(None), server_c
     return True
 
 
-async def validate_accept_header(request: Request):
+async def validate_accept_header(request: Request) -> None:
     accept_header = request.headers.get("Accept")
     if request.method == "POST":
         # Allow application/json, */* (wildcard), or missing header for MCP compatibility
@@ -60,11 +60,11 @@ async def validate_accept_header(request: Request):
 
 
 def create_app(
-    server_config: dict,
-    lifecycle_manager=None,
-    tool_definitions: List[dict] = None,
-    active_sessions: Dict[str, Any] = None,
-    tool_registry: Dict[str, Any] = None
+    server_config: Dict[str, Any],
+    lifecycle_manager: Any = None,
+    tool_definitions: Optional[List[Dict[str, Any]]] = None,
+    active_sessions: Optional[Dict[str, Any]] = None,
+    tool_registry: Optional[Dict[str, Any]] = None
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -81,7 +81,7 @@ def create_app(
 
     # Define lifespan context manager for cleanup
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Startup
         logging.info("FastAPI application starting up")
         yield
@@ -115,7 +115,7 @@ def create_app(
     )
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
         logging.error(
             "FastAPI Request Validation Error: %s for URL: %s, Body: %s",
             exc.errors(), request.url, await request.body()
@@ -134,7 +134,7 @@ def create_app(
 
     # Add root endpoint
     @app.api_route("/", methods=["GET", "POST", "DELETE"], response_class=JSONResponse)
-    async def root(request: Request, authenticated: bool = Depends(get_authenticated_status)):
+    async def root(request: Request, authenticated: bool = Depends(get_authenticated_status)) -> Any:
         """Root endpoint - handles SSE connections, JSON-RPC requests, and disconnections."""
         if request.method == "GET":
             accept = request.headers.get("accept", "")
@@ -164,9 +164,9 @@ def create_app(
 
                 if method == "initialize":
                     params = rpc_request.params or {}
-                    return await handle_initialize(rpc_id, params, server_config, tool_definitions, active_sessions)
+                    return await handle_initialize(rpc_id, params, server_config, tool_definitions or [], active_sessions or {})  # type: ignore[arg-type]
                 elif method == "tools/list":
-                    return await handle_tools_list(rpc_id, tool_definitions)
+                    return await handle_tools_list(rpc_id, tool_definitions or [])  # type: ignore[arg-type]
                 elif method == "resources/list":
                     return await handle_resources_list(rpc_id)
                 elif method == "resources/read":
@@ -191,13 +191,13 @@ def create_app(
                     status_code=422
                 )
             except Exception as e:
-                error_id = rpc_id if 'rpc_id' in locals() and rpc_id is not None else None
+                error_id: int = rpc_id if 'rpc_id' in locals() and rpc_id is not None else 0
                 logging.error("Error handling POST to root: %s, Request body: %s", e, await request.body())
                 return handle_server_error(error_id, e)
 
     # Add health check endpoint
     @app.get("/health")
-    async def health_check():
+    async def health_check() -> Dict[str, Any]:
         """Health check endpoint for monitoring system status."""
         return {
             "status": "healthy",
@@ -210,7 +210,7 @@ def create_app(
 
 
 def setup_json_rpc_handler(
-        app: FastAPI, tool_registry: Dict[str, Any], tool_definitions: List[dict], server_config: dict):
+        app: FastAPI, tool_registry: Dict[str, Any], tool_definitions: List[Dict[str, Any]], server_config: Dict[str, Any]) -> None:
     """Setup the main JSON-RPC and SSE endpoint handler.
 
     Args:
@@ -221,7 +221,7 @@ def setup_json_rpc_handler(
     """
 
     @app.get("/mcp")
-    async def events_endpoint():
+    async def events_endpoint() -> StreamingResponse:
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     @app.api_route("/mcp", methods=["GET", "POST"], response_class=JSONResponse)
@@ -230,7 +230,7 @@ def setup_json_rpc_handler(
         mcp_session_id: Optional[str] = Header(None),
         x_api_key: Optional[str] = Header(None),
         accept_header_validated: None = Depends(validate_accept_header),
-    ):
+    ) -> Any:
         # Authenticate (no-op when auth disabled)
         await authenticate_api_key(x_api_key, server_config=server_config)
 
@@ -305,5 +305,5 @@ def setup_json_rpc_handler(
                 # Re-raise FastAPI HTTP errors so the framework can render them
                 raise exc
             except Exception as e:
-                error_id = rpc_id if 'rpc_id' in locals() and rpc_id is not None else None
-                return handle_server_error(error_id, e)
+                error_id_val: int = rpc_id if 'rpc_id' in locals() and rpc_id is not None else 0
+                return handle_server_error(error_id_val, e)

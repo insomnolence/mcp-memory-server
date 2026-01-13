@@ -20,7 +20,7 @@ from langchain_chroma import Chroma
 try:
     from chromadb.errors import ChromaError
 except ImportError:
-    ChromaError = Exception
+    ChromaError = Exception  # type: ignore[misc, assignment]
 
 from ..exceptions import MaintenanceError, CleanupError, DeduplicationError
 
@@ -31,10 +31,10 @@ class MemoryMaintenanceService:
     def __init__(
         self,
         short_term_memory: Chroma,
-        storage_service,
-        deduplicator,
+        storage_service: Any,
+        deduplicator: Any,
         config: Optional[Dict[str, Any]] = None
-    ):
+    ) -> None:
         """Initialize maintenance service.
 
         Args:
@@ -113,8 +113,11 @@ class MemoryMaintenanceService:
                 ):
                     # Ensure metadata exists and add the ChromaDB ID for deletion
                     if metadata is None:
-                        metadata = {}
-                    metadata['chroma_id'] = doc_id
+                        metadata_dict: Dict[str, Any] = {}
+                    else:
+                        metadata_dict = dict(metadata)  # type: ignore[arg-type]
+                    metadata_dict['chroma_id'] = doc_id
+                    metadata = metadata_dict  # type: ignore[assignment]
                     all_docs.append(Document(page_content=content or '', metadata=metadata))
             else:
                 # Fallback to similarity search if direct access unavailable
@@ -190,10 +193,13 @@ class MemoryMaintenanceService:
         """
         def doc_quality_score(doc: Document) -> float:
             metadata = doc.metadata
+            importance = float(metadata.get('importance_score', 0) or 0)
+            access = float(metadata.get('access_count', 0) or 0)
+            timestamp = float(metadata.get('timestamp', 0) or 0)
             return (
-                metadata.get('importance_score', 0) * 0.5 +
-                metadata.get('access_count', 0) * 0.3 +
-                (metadata.get('timestamp', 0) / 86400) * 0.2  # Recency bonus (days)
+                importance * 0.5 +
+                access * 0.3 +
+                (timestamp / 86400) * 0.2  # Recency bonus (days)
             )
 
         return doc1 if doc_quality_score(doc1) < doc_quality_score(doc2) else doc2

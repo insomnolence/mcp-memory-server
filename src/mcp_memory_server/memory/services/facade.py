@@ -16,7 +16,7 @@ from langchain_chroma import Chroma
 try:
     from chromadb.errors import ChromaError
 except ImportError:
-    ChromaError = Exception
+    ChromaError = Exception  # type: ignore[misc, assignment]
 
 from ..scorer import MemoryImportanceScorer
 from ..query_monitor import QueryPerformanceMonitor
@@ -353,7 +353,7 @@ class HierarchicalMemorySystem:
     # Public API - Configuration
     # =========================================================================
 
-    def set_lifecycle_manager(self, lifecycle_manager) -> None:
+    def set_lifecycle_manager(self, lifecycle_manager: Any) -> None:
         """Set the lifecycle manager for TTL and aging functionality.
 
         Args:

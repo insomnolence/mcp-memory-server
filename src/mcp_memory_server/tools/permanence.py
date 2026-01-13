@@ -1,8 +1,9 @@
 import asyncio
+from typing import Any, Dict, List
 from ..server.errors import create_success_response, create_tool_error, MCPErrorCode
 
 
-async def query_permanent_documents_tool(memory_system, query: str, k: int = 5) -> dict:
+async def query_permanent_documents_tool(memory_system: Any, query: str, k: int = 5) -> Dict[str, Any]:
     """Query only permanent documents in the memory system.
 
     Args:
@@ -77,7 +78,7 @@ async def query_permanent_documents_tool(memory_system, query: str, k: int = 5) 
         )
 
 
-async def get_permanence_stats_tool(memory_system) -> dict:
+async def get_permanence_stats_tool(memory_system: Any) -> Dict[str, Any]:
     """Get comprehensive statistics about permanent content.
 
     Args:
@@ -87,7 +88,7 @@ async def get_permanence_stats_tool(memory_system) -> dict:
         Dictionary with permanence statistics
     """
     try:
-        stats = {
+        stats: Dict[str, Any] = {
             'success': True,
             'permanent_content_stats': {
                 'total_permanent_documents': 0,

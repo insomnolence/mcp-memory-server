@@ -9,14 +9,14 @@ Implements multi-phase cleanup to avoid performance impact:
 
 import time
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from enum import Enum
 
 # Import ChromaDB errors for specific exception handling
 try:
     from chromadb.errors import ChromaError
 except ImportError:
-    ChromaError = Exception
+    ChromaError = Exception  # type: ignore[misc, assignment]
 
 # Custom exceptions available for enhanced error handling
 # from .exceptions import CleanupError, DeduplicationError
@@ -31,7 +31,7 @@ class CleanupPhase(Enum):
 class ProgressiveCleanupManager:
     """Manages progressive cleanup phases for memory collections."""
 
-    def __init__(self, memory_system, cleanup_config: dict = None):
+    def __init__(self, memory_system: Any, cleanup_config: Optional[Dict[str, Any]] = None) -> None:
         """Initialize progressive cleanup manager.
 
         Args:
@@ -42,10 +42,10 @@ class ProgressiveCleanupManager:
         self.config = cleanup_config or self._get_default_config()
 
         # Tracking last cleanup times
-        self.last_cleanup = {
-            CleanupPhase.DAILY: 0,
-            CleanupPhase.WEEKLY: 0,
-            CleanupPhase.MONTHLY: 0
+        self.last_cleanup: Dict[CleanupPhase, float] = {
+            CleanupPhase.DAILY: 0.0,
+            CleanupPhase.WEEKLY: 0.0,
+            CleanupPhase.MONTHLY: 0.0
         }
 
         # Load cleanup history if available
@@ -83,11 +83,11 @@ class ProgressiveCleanupManager:
         last_run = self.last_cleanup.get(phase, 0)
         interval_seconds = self.config[phase.value]['interval_hours'] * 3600
 
-        return (current_time - last_run) >= interval_seconds
+        return bool((current_time - last_run) >= interval_seconds)
 
     def run_scheduled_cleanup(self) -> Dict[str, Any]:
         """Run all scheduled cleanup phases that are due."""
-        results = {
+        results: Dict[str, Any] = {
             'total_processing_time': 0.0,
             'phases_executed': [],
             'total_documents_processed': 0,
@@ -326,7 +326,7 @@ class ProgressiveCleanupManager:
 
         return insights
 
-    def _load_cleanup_history(self):
+    def _load_cleanup_history(self) -> None:
         """Load cleanup history from persistent storage."""
         try:
             # Implementation would load from file or database
@@ -340,7 +340,7 @@ class ProgressiveCleanupManager:
         except Exception as e:
             logging.warning(f"Failed to load cleanup history: {e}")
 
-    def _save_cleanup_history(self):
+    def _save_cleanup_history(self) -> None:
         """Save cleanup history to persistent storage."""
         try:
             # Implementation would save to file or database
@@ -352,7 +352,7 @@ class ProgressiveCleanupManager:
     def get_cleanup_status(self) -> Dict[str, Any]:
         """Get status of all cleanup phases."""
         current_time = time.time()
-        status = {
+        status: Dict[str, Any] = {
             'current_time': current_time,
             'phases': {}
         }

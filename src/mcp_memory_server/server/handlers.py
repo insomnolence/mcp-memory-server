@@ -58,7 +58,7 @@ async def read_resource_handler(uri: str) -> dict:
     )
 
 
-async def event_generator():
+async def event_generator() -> Any:
     """Handle SSE connection for the Gemini CLI.
 
     Sends the 'mcp-ready' event and keeps the connection alive with heartbeats.

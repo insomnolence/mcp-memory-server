@@ -44,7 +44,7 @@ class Config:
                 config = json.load(f)
 
             logging.info(f"Configuration loaded from {self.config_path}")
-            return config
+            return dict(config) if isinstance(config, dict) else {}
         except Exception as e:
             logging.error(f"Failed to load configuration: {e}")
             # Return default configuration
@@ -105,11 +105,12 @@ class Config:
             ]
         )
 
-    def _load_json_file(self, file_path: Path) -> dict:
+    def _load_json_file(self, file_path: Path) -> Dict[str, Any]:
         """Load a JSON configuration file"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                result = json.load(f)
+                return dict(result) if isinstance(result, dict) else {}
         except Exception as e:
             logging.warning(f"Failed to load config file {file_path}: {e}")
             return {}

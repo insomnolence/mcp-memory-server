@@ -10,7 +10,7 @@ Based on the algorithm from docs/memory-deduplication-proposal.md
 import time
 import numpy as np
 import logging
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 from sklearn.metrics.pairwise import cosine_similarity
 
 
@@ -24,7 +24,7 @@ class SimilarityCalculator:
             similarity_threshold: Threshold above which documents are considered duplicates
         """
         self.similarity_threshold = similarity_threshold
-        self.calculation_cache = {}
+        self.calculation_cache: Dict[str, float] = {}
 
     def calculate_similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
         """Calculate cosine similarity between two embeddings.
@@ -45,7 +45,7 @@ class SimilarityCalculator:
         return float(similarity)
 
     def find_duplicates_batch(self, documents: List[Dict[str, Any]],
-                              threshold: float = None) -> List[Tuple[Dict, Dict, float]]:
+                              threshold: Optional[float] = None) -> List[Tuple[Dict[str, Any], Dict[str, Any], float]]:
         """Find duplicate documents using batch similarity calculation.
 
         This is the core algorithm from the existing deduplication proposal.

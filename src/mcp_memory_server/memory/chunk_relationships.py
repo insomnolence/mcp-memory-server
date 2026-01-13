@@ -21,7 +21,7 @@ from langchain_core.documents import Document
 try:
     from chromadb.errors import ChromaError
 except ImportError:
-    ChromaError = Exception
+    ChromaError = Exception  # type: ignore[misc, assignment]
 
 # Import services
 from .services.relationship_persistence import (
@@ -45,7 +45,7 @@ class ChunkRelationshipManager:
     compatibility with existing code that depends on this class.
     """
 
-    def __init__(self, memory_system, relationship_config: dict = None):
+    def __init__(self, memory_system: Any, relationship_config: Optional[Dict[str, Any]] = None) -> None:
         """Initialize chunk relationship manager.
 
         Args:
@@ -440,10 +440,10 @@ class ChunkRelationshipManager:
         self.document_relationships[memory_id] = document_relationship
 
         for doc in documents:
-            chunk_id = doc.metadata.get('chunk_id')
-            if chunk_id and chunk_id not in self.chunk_relationships:
+            doc_chunk_id: Optional[str] = doc.metadata.get('chunk_id')
+            if doc_chunk_id and doc_chunk_id not in self.chunk_relationships:
                 logging.warning(
-                    f"Chunk relationship for {chunk_id} was not stored properly"
+                    f"Chunk relationship for {doc_chunk_id} was not stored properly"
                 )
 
         if self.config['enable_related_retrieval']:
@@ -469,7 +469,7 @@ class ChunkRelationshipManager:
         new_document_id: str,
         content: str,
         new_documents: List[Document]
-    ):
+    ) -> None:
         """Find and establish relationships with semantically similar documents."""
         try:
             similar_results = await self.memory_system.query_memories(
@@ -498,7 +498,7 @@ class ChunkRelationshipManager:
         doc: Document,
         candidates: List[Document],
         collection_name: str
-    ):
+    ) -> None:
         """Update semantic relationships between documents and persist."""
         chunk_id = doc.metadata.get('chunk_id')
         if not chunk_id:
@@ -531,7 +531,7 @@ class ChunkRelationshipManager:
         self,
         docs: List[Document],
         collection_name: str
-    ):
+    ) -> None:
         """Update co-occurrence relationships between documents."""
         doc_terms = []
         for doc in docs:

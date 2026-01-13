@@ -22,7 +22,7 @@ from langchain_chroma import Chroma
 try:
     from chromadb.errors import ChromaError
 except ImportError:
-    ChromaError = Exception
+    ChromaError = Exception  # type: ignore[misc, assignment]
 
 # Custom exceptions available for enhanced error handling
 # from ..exceptions import StorageError
@@ -35,12 +35,12 @@ class MemoryStorageService:
         self,
         short_term_memory: Chroma,
         long_term_memory: Chroma,
-        chunk_manager,
-        importance_scorer,
-        deduplicator,
-        lifecycle_manager=None,
+        chunk_manager: Any,
+        importance_scorer: Any,
+        deduplicator: Any,
+        lifecycle_manager: Any = None,
         config: Optional[Dict[str, Any]] = None
-    ):
+    ) -> None:
         """Initialize storage service.
 
         Args:
@@ -66,7 +66,7 @@ class MemoryStorageService:
         self.short_term_threshold = config.get('short_term_threshold', 0.7)
         self.long_term_threshold = config.get('long_term_threshold', 0.95)
 
-    def set_lifecycle_manager(self, lifecycle_manager):
+    def set_lifecycle_manager(self, lifecycle_manager: Any) -> None:
         """Set the lifecycle manager for TTL and aging functionality."""
         self.lifecycle_manager = lifecycle_manager
 

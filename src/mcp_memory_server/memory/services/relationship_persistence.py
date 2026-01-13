@@ -36,7 +36,7 @@ class RelationshipPersistenceService:
     - Chunk relationship persistence
     """
 
-    def __init__(self, memory_system):
+    def __init__(self, memory_system: Any) -> None:
         """Initialize the persistence service.
 
         Args:
@@ -255,7 +255,7 @@ class RelationshipPersistenceService:
                 return True  # Nothing to persist
 
             result = await self.memory_system.update_document_metadata(chunk_id, serialized)
-            return result.get('success', False)
+            return bool(result.get('success', False))
 
         except Exception as e:
             logging.warning(f"Failed to persist relationships for chunk {chunk_id}: {e}")

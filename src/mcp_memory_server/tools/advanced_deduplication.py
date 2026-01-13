@@ -7,10 +7,11 @@ domain analysis, semantic clustering, threshold optimization, and performance me
 
 import asyncio
 import logging
+from typing import Any, Dict
 from ..server.errors import create_success_response, create_tool_error, MCPErrorCode
 
 
-def optimize_deduplication_thresholds_tool(memory_system) -> dict:
+def optimize_deduplication_thresholds_tool(memory_system: Any) -> Dict[str, Any]:
     """Optimize deduplication thresholds automatically using advanced features.
 
     Args:
@@ -49,7 +50,7 @@ def optimize_deduplication_thresholds_tool(memory_system) -> dict:
         )
 
 
-async def get_domain_analysis_tool(memory_system, collection: str = "short_term") -> dict:
+async def get_domain_analysis_tool(memory_system: Any, collection: str = "short_term") -> Dict[str, Any]:
     """Analyze documents by domain for deduplication threshold recommendations.
 
     Args:
@@ -128,7 +129,7 @@ async def get_domain_analysis_tool(memory_system, collection: str = "short_term"
         )
 
 
-async def get_clustering_analysis_tool(memory_system, collection: str = "short_term") -> dict:
+async def get_clustering_analysis_tool(memory_system: Any, collection: str = "short_term") -> Dict[str, Any]:
     """Perform semantic clustering analysis on documents.
 
     Args:
@@ -207,7 +208,7 @@ async def get_clustering_analysis_tool(memory_system, collection: str = "short_t
         )
 
 
-def get_advanced_deduplication_metrics_tool(memory_system) -> dict:
+def get_advanced_deduplication_metrics_tool(memory_system: Any) -> Dict[str, Any]:
     """Get comprehensive advanced deduplication performance metrics.
 
     Args:
@@ -258,8 +259,8 @@ def get_advanced_deduplication_metrics_tool(memory_system) -> dict:
         )
 
 
-async def run_advanced_deduplication_tool(memory_system, collection: str = "short_term",
-                                          dry_run: bool = False) -> dict:
+async def run_advanced_deduplication_tool(memory_system: Any, collection: str = "short_term",
+                                          dry_run: bool = False) -> Dict[str, Any]:
     """Run advanced deduplication with domain awareness and semantic clustering.
 
     Args:

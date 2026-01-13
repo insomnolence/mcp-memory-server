@@ -1,9 +1,10 @@
 import logging
+from typing import Any, Dict, List, Optional
 from ..server.errors import create_tool_error, MCPErrorCode
 
 
-async def query_documents_tool(memory_system, query: str, collections: str = None,
-                               k: int = 5, use_reranker: bool = True, reranker_model=None) -> dict:
+async def query_documents_tool(memory_system: Any, query: str, collections: Optional[str] = None,
+                               k: int = 5, use_reranker: bool = True, reranker_model: Any = None) -> Dict[str, Any]:
     """Query documents from the hierarchical memory system with intelligent scoring.
 
     Args:
@@ -62,7 +63,7 @@ async def query_documents_tool(memory_system, query: str, collections: str = Non
 
         # Transform to MCP-compliant format (2025-06-18 spec)
         # Return the full formatted text blocks directly
-        mcp_result = {
+        mcp_result: Dict[str, Any] = {
             "content": [],
             "results": [],  # Structured results for programmatic access
             "isError": False  # Required by MCP spec
@@ -121,7 +122,7 @@ async def query_documents_tool(memory_system, query: str, collections: str = Non
         )
 
 
-async def apply_reranking(query: str, result: dict, reranker_model=None) -> dict:
+async def apply_reranking(query: str, result: Dict[str, Any], reranker_model: Any = None) -> Dict[str, Any]:
     """Apply cross-encoder reranking to improve result quality.
 
     Args:

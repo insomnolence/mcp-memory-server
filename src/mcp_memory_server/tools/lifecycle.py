@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from ..memory.lifecycle import LifecycleManager
 from ..server.errors import create_success_response, create_tool_error, MCPErrorCode
 
@@ -33,7 +33,7 @@ def get_lifecycle_stats_tool(lifecycle_manager: LifecycleManager) -> Dict[str, A
 
 
 async def cleanup_expired_memories_tool(lifecycle_manager: LifecycleManager,
-                                        collection: str = None) -> Dict[str, Any]:
+                                        collection: Optional[str] = None) -> Dict[str, Any]:
     """Clean up expired memories based on TTL.
 
     Args:
@@ -60,7 +60,7 @@ async def cleanup_expired_memories_tool(lifecycle_manager: LifecycleManager,
 
 
 async def refresh_memory_aging_tool(lifecycle_manager: LifecycleManager,
-                                    collection: str = None, sample_size: int = 100) -> Dict[str, Any]:
+                                    collection: Optional[str] = None, sample_size: int = 100) -> Dict[str, Any]:
     """Refresh aging scores for memories that need updating.
 
     Args:
