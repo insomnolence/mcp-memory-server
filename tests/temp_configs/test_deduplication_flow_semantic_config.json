@@ -1,7 +1,7 @@
 {
   "_comment": "Testing configuration - optimized for fast tests with clean state",
   "database": {
-    "persist_directory": "/home/dibble/development/mcp-memory-server/tests/temp_test_db/test_deduplication_flow_semantic_540888",
+    "persist_directory": "./tests/temp_test_db/test_deduplication_flow_semantic",
     "collections": {
       "short_term": "test_short_term",
       "long_term": "test_long_term"
