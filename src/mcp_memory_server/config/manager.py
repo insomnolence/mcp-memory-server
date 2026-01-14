@@ -16,7 +16,7 @@ class Config:
             self.config_path = config_path
         elif domain:
             domain_config = self.project_root / "config" / "domains" / f"{domain}.json"
-            base_config_path = self.project_root / "config.json"
+            base_config_path = self.project_root / "config" / "config.json"
 
             # Load and merge configs
             base_config = self._load_json_file(base_config_path) if base_config_path.exists() else {}
@@ -27,8 +27,8 @@ class Config:
             self._setup_logging()
             return
         else:
-            # Default to single config.json file
-            self.config_path = str(self.project_root / "config.json")
+            # Default to config.json in config subdirectory
+            self.config_path = str(self.project_root / "config" / "config.json")
 
         self._config = self._load_config()
         self._setup_logging()
